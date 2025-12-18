@@ -1,17 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../data/enums/firebase_collection_enum.dart';
+import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
 
 abstract class IAppUserService {
   Future<AppUser?> getUserById(String uid);
-
   Future<void> createUser(AppUser user);
-
   Future<void> updateUser(AppUser user);
-
   Future<AppUser> updateFcmToken(AppUser appUser);
-
+  Future<void> createAccount(String uid, Account account);
+  Future<void> finalizeSetup(String uid, List<String> paymentMethods);
   AppUser? get currentAppUser;
 }
 
@@ -31,7 +30,8 @@ class AppUserService implements IAppUserService {
   @override
   Future<AppUser?> getUserById(String uid) async {
     final doc = await usersCollection.doc(uid).get();
-    return doc.data();
+    _currentAppUser = doc.data();
+    return _currentAppUser;
   }
 
   @override
@@ -71,6 +71,25 @@ class AppUserService implements IAppUserService {
       updatedAt: appUser.updatedAt,
       fcmToken: fcmToken,
     );
+  }
+
+  @override
+  Future<void> createAccount(String uid, Account account) async {
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('accounts')
+        .doc(account.id)
+        .set(account.toJson());
+  }
+
+  @override
+  Future<void> finalizeSetup(String uid, List<String> paymentMethods) async {
+    await _firebaseFirestore.collection('users').doc(uid).update({
+      'hasCompletedSetup': true,
+      'paymentMethods': paymentMethods,
+      'updatedAt': Timestamp.now(),
+    });
   }
 
   @override

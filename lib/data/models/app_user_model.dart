@@ -8,6 +8,8 @@ class AppUser {
   final Timestamp createdAt;
   final Timestamp updatedAt;
   final String? fcmToken;
+  final bool hasCompletedSetup;
+  final List<Map<String, dynamic>> paymentMethods;
 
   AppUser({
     required this.uid,
@@ -17,6 +19,8 @@ class AppUser {
     required this.createdAt,
     required this.updatedAt,
     this.fcmToken,
+    this.hasCompletedSetup = false,
+    this.paymentMethods = const [],
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -28,6 +32,8 @@ class AppUser {
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
       fcmToken: json['fcmToken'],
+      hasCompletedSetup: json['hasCompletedSetup'] ?? false,
+      paymentMethods: List<Map<String, dynamic>>.from(json['paymentMethods'] ?? []),
     );
   }
 
@@ -40,6 +46,8 @@ class AppUser {
       'createdAt': createdAt,
       'updatedAt': Timestamp.now(),
       'fcmToken': fcmToken,
+      'hasCompletedSetup': hasCompletedSetup,
+      'paymentMethods': paymentMethods,
     };
   }
 
@@ -47,6 +55,8 @@ class AppUser {
     String? displayName,
     String? photoURL,
     String? fcmToken,
+    bool? hasCompletedSetup,
+    List<Map<String, dynamic>>? paymentMethods,
   }) {
     return AppUser(
       uid: uid,
@@ -56,6 +66,8 @@ class AppUser {
       createdAt: createdAt,
       updatedAt: Timestamp.now(),
       fcmToken: fcmToken ?? this.fcmToken,
+      hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
+      paymentMethods: paymentMethods ?? this.paymentMethods,
     );
   }
 }

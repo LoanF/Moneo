@@ -4,10 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../core/di.dart';
+import '../../core/notifiers/auth_notifier.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/user_service.dart';
 import '../../data/enums/auth_exception_code_enum.dart';
 import '../../data/enums/storage_child_enum.dart';
+import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
 import 'common_view_model.dart';
 
@@ -118,6 +120,52 @@ class AuthViewModel extends CommonViewModel {
     } catch (e) {
       isLoading = false;
       errorMessage = "Erreur mise à jour : $e";
+      return false;
+    }
+  }
+
+  Future<bool> completeSetup({
+    required List<Map<String, dynamic>> accounts,
+    required List<Map<String, dynamic>> paymentMethods,
+  }) async {
+    isLoading = true;
+    errorMessage = null;
+
+    try {
+      final uid = currentUser?.uid;
+      if (uid == null) throw Exception("Utilisateur non connecté");
+
+      for (var data in accounts) {
+        final String accountId = "${DateTime.now().millisecondsSinceEpoch}_${data['name']}";
+
+        final account = Account(
+          id: accountId,
+          name: data['name'],
+          initialBalance: (data['balance'] as num).toDouble(),
+          currentBalance: (data['balance'] as num).toDouble(),
+        );
+
+        await _appUserService.createAccount(uid, account);
+      }
+
+      final currentUserProfile = _appUserService.currentAppUser;
+      if (currentUserProfile == null) throw Exception("Profil introuvable");
+
+      final updatedAppUser = currentUserProfile.copyWith(
+        hasCompletedSetup: true,
+        paymentMethods: paymentMethods,
+      );
+
+      if (updatedAppUser == null) throw Exception("Profil introuvable");
+
+      await _appUserService.updateUser(updatedAppUser);
+      getIt<AuthNotifier>().refreshProfile(updatedAppUser);
+
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = "Erreur lors de la configuration : $e";
       return false;
     }
   }

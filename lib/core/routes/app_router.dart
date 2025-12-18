@@ -3,12 +3,10 @@ import 'package:moneo/presentation/views/home_page.dart';
 import 'package:moneo/presentation/views/settings_page.dart';
 import '../../presentation/views/login_page.dart';
 import '../../presentation/views/register_page.dart';
+import '../../presentation/views/setup_page.dart';
 import '../di.dart';
 import '../notifiers/auth_notifier.dart';
-import '../services/auth_service.dart';
 import 'app_routes.dart';
-
-final authNotifier = AuthNotifier(getIt<IAuthService>());
 
 final List<String> unauthenticatedRoutes = [
   AppRoutes.login,
@@ -16,20 +14,40 @@ final List<String> unauthenticatedRoutes = [
 ];
 
 final GoRouter appRouter = GoRouter(
-  refreshListenable: authNotifier,
+  refreshListenable: getIt<AuthNotifier>(),
   initialLocation: AppRoutes.login,
   redirect: (context, state) async {
+    final authNotifier = getIt<AuthNotifier>();
     final loggedIn = authNotifier.isAuthenticated;
-    final loggingIn = state.matchedLocation == AppRoutes.login;
+    final user = authNotifier.appUser;
 
     if (!loggedIn) {
-      if (!unauthenticatedRoutes.contains(state.matchedLocation)) {
-        return AppRoutes.login;
+      return unauthenticatedRoutes.contains(state.matchedLocation) ? null : AppRoutes.login;
+    }
+
+    if (authNotifier.isLoadingProfile) return null;
+
+    final appUser = authNotifier.appUser;
+
+    if (appUser != null && !appUser.hasCompletedSetup) {
+      if (state.matchedLocation != AppRoutes.setup) {
+        return AppRoutes.setup;
       }
       return null;
     }
 
-    if (loggingIn) {
+    if (user != null && user.hasCompletedSetup) {
+      if (state.matchedLocation == AppRoutes.login || state.matchedLocation == AppRoutes.setup) {
+        return AppRoutes.home;
+      }
+      return null;
+    }
+
+    final isGoingToAuthOrSetup = state.matchedLocation == AppRoutes.login ||
+        state.matchedLocation == AppRoutes.register ||
+        state.matchedLocation == AppRoutes.setup;
+
+    if (isGoingToAuthOrSetup) {
       return AppRoutes.home;
     }
 
@@ -55,6 +73,11 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.settings,
       name: 'settings',
       builder: (context, state) => SettingsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.setup,
+      name: 'setup',
+      builder: (context, state) => const SetupPage(),
     ),
   ],
 );
