@@ -1,15 +1,53 @@
-import 'package:flutter/widgets.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(const MyApp());
+import 'core/di.dart';
+import 'core/routes/app_router.dart';
+import 'core/themes/app_theme.dart';
+import 'firebase_options.dart';
+import 'presentation/view_models/auth_view_model.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  configureDependencies();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => getIt<AuthViewModel>()),
+      ],
+      child: const Moneo(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Moneo extends StatelessWidget {
+  const Moneo({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ShadApp();
+    return MaterialApp.router(
+      title: 'Moneo',
+      themeMode: ThemeMode.dark,
+      darkTheme: AppTheme.darkTheme,
+      routerConfig: appRouter,
+      debugShowCheckedModeBanner: false,
+    );
   }
 }

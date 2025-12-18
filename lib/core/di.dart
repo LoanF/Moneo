@@ -7,8 +7,6 @@ final getIt = GetIt.instance;
 
 void configureDependencies() {
   getIt.registerLazySingleton<IAppUserService>(() => AppUserService());
-  getIt.registerLazySingleton<IAuthService>(
-        () => AuthService(getIt<IAppUserService>()),
-  );
+  getIt.registerLazySingleton<IAuthService>(() => AuthService(getIt<IAppUserService>()));
   getIt.registerSingleton<AuthViewModel>(AuthViewModel());
 }
