@@ -7,21 +7,24 @@ import '../../core/routes/app_routes.dart';
 import '../../data/constants/assets.dart';
 import '../view_models/auth_view_model.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+  TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -40,18 +43,18 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 SvgPicture.asset(AppAssets.logo, height: 150),
                 Text(
-                  "Bienvenue",
+                  "Créer un compte",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Connectez-vous pour continuer",
+                  "Inscrivez-vous pour commencer",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
 
-                const SizedBox(height: 48),
+                const SizedBox(height: 30),
 
                 TextField(
                   controller: _emailController,
@@ -59,6 +62,7 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: const InputDecoration(
                     labelText: "Email",
                     prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -69,17 +73,21 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: const InputDecoration(
                     labelText: "Mot de passe",
                     prefixIcon: Icon(Icons.lock_outlined),
-                    suffixIcon: Icon(Icons.visibility_off_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Confirmer le mot de passe",
+                    prefixIcon: Icon(Icons.lock_reset_outlined),
+                    border: OutlineInputBorder(),
                   ),
                 ),
 
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text("Mot de passe oublié ?"),
-                  ),
-                ),
                 const SizedBox(height: 24),
 
                 FilledButton.icon(
@@ -88,9 +96,23 @@ class _LoginPageState extends State<LoginPage> {
                       : () async {
                     FocusScope.of(context).unfocus();
 
+                    if (_passwordController.text !=
+                        _confirmPasswordController.text) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Les mots de passe ne correspondent pas.",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
                     final bool success = await context
                         .read<AuthViewModel>()
-                        .login(
+                        .register(
                       _emailController.text,
                       _passwordController.text,
                     );
@@ -104,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            viewModel.errorMessage!,
+                            viewModel.errorMessage ?? "Erreur inconnue",
                             style: const TextStyle(color: Colors.white),
                           ),
                           backgroundColor: Colors.red,
@@ -121,10 +143,9 @@ class _LoginPageState extends State<LoginPage> {
                       color: Colors.white,
                     ),
                   )
-                      : const Icon(Icons.login, color: Colors.white),
+                      : const Icon(Icons.login),
                   label: Text(
-                    viewModel.isLoading ? "Connexion..." : "Se connecter",
-                    style: const TextStyle(color: Colors.white),
+                    viewModel.isLoading ? "Création..." : "S'inscrire",
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -154,12 +175,12 @@ class _LoginPageState extends State<LoginPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Pas encore de compte ?"),
+                    const Text("Déjà un compte ?"),
                     TextButton(
                       onPressed: () {
-                        context.go(AppRoutes.register);
+                        context.go(AppRoutes.login);
                       },
-                      child: const Text("S'inscrire"),
+                      child: const Text("Se connecter"),
                     ),
                   ],
                 ),

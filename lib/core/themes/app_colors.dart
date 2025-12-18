@@ -12,9 +12,9 @@ class AppColors {
   static const Color grey1 = Color(0xFF8A8A8A);
   static const Color grey2 = Color(0xFFBDBDBD);
 
-  static const Color primaryBlue = Color(0xFF2196F3);
-  static const Color lightBlue = Color(0xFF64B5F6);
-  static const Color darkBlue = Color(0xFF1565C0);
+  static const Color primaryRed = Color(0xFFF44336);
+  static const Color lightRed = Color(0xFFE57373);
+  static const Color darkRed = Color(0xFFC62828);
 
   static const Color primaryGreen = Color(0xFF4CAF50);
   static const Color lightGreen = Color(0xFF81C784);
@@ -27,13 +27,14 @@ class AppColors {
   // Dark theme specific
   static const Color mainBackground = black;
   static const Color secondaryBackground = lightBlack;
+  static const Color thirdBackground = darkGrey;
 
   static const Color mainText = darkWhite;
   static const Color secondaryText = grey2;
 
-  static const Color mainColor = primaryBlue;
+  static const Color mainColor = primaryRed;
   static const Color secondaryColor = primaryGreen;
 
-  static const Color secondaryButton = lightBlue;
-  static const Color linkAction = lightBlue;
+  static const Color secondaryButton = lightRed;
+  static const Color linkAction = lightRed;
 }

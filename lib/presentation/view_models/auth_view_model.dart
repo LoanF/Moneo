@@ -34,6 +34,19 @@ class AuthViewModel extends CommonViewModel {
     }
   }
 
+  Future<bool> loginWithGoogle() async {
+    isLoading = true;
+    try {
+      await _auth.signInWithGoogle();
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = "Erreur de connexion Google : $e";
+      return false;
+    }
+  }
+
   Future<bool> register(String email, String password) async {
     isLoading = true;
 

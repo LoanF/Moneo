@@ -1,17 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../data/models/app_user_model.dart';
 import 'user_service.dart';
 
 abstract class IAuthService {
   Stream<User?> get authStateChanges;
-
   Future<void> signInWithEmail(String email, String password);
-
+  Future<void> signInWithGoogle();
   Future<void> signOut();
-
   Future<void> createUserWithEmailAndPassword(String email, String password);
-
   User? get currentUser;
 }
 
@@ -32,6 +30,35 @@ class AuthService implements IAuthService {
       password: password.trim(),
     );
     _appUserService.updateUser(_appUserService.currentAppUser!);
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    await GoogleSignIn.instance.initialize();
+    final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
+    final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
+
+    final UserCredential userCredential = await _firebaseAuth.signInWithCredential(credential);
+    final User? user = userCredential.user;
+
+    if (user != null) {
+      final existingUser = await _appUserService.getUserById(user.uid);
+
+      if (existingUser == null) {
+        final newUser = AppUser(
+          uid: user.uid,
+          displayName: user.displayName ?? '',
+          email: user.email ?? '',
+          photoURL: user.photoURL ?? '',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        );
+        await _appUserService.createUser(newUser);
+      } else {
+        await _appUserService.updateUser(existingUser);
+      }
+    }
   }
 
   @override

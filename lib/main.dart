@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:moneo/presentation/view_models/home_view_model.dart';
 import 'package:provider/provider.dart';
 
 import 'core/di.dart';
@@ -31,6 +32,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => getIt<AuthViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<HomeViewModel>()),
       ],
       child: const Moneo(),
     ),
