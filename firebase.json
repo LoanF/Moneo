@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"moneo-app","appId":"1:1048208899254:android:3806eafb8952eeb99d3a17","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"moneo-app","configurations":{"android":"1:1048208899254:android:3806eafb8952eeb99d3a17","ios":"1:1048208899254:ios:38ecb8023f5ed2d19d3a17"}}}}}}
