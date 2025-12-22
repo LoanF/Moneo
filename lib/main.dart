@@ -6,6 +6,7 @@ import 'package:moneo/presentation/view_models/home_view_model.dart';
 import 'package:provider/provider.dart';
 
 import 'core/di.dart';
+import 'core/notifiers/auth_notifier.dart';
 import 'core/routes/app_router.dart';
 import 'core/themes/app_theme.dart';
 import 'firebase_options.dart';
@@ -33,6 +34,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => getIt<AuthViewModel>()),
         ChangeNotifierProvider(create: (_) => getIt<HomeViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<AuthNotifier>()),
       ],
       child: const Moneo(),
     ),

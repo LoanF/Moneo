@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../data/enums/firebase_collection_enum.dart';
 import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
+import '../../data/models/transaction_model.dart';
 
 abstract class IAppUserService {
   Future<AppUser?> getUserById(String uid);
@@ -11,6 +12,8 @@ abstract class IAppUserService {
   Future<AppUser> updateFcmToken(AppUser appUser);
   Future<void> createAccount(String uid, Account account);
   Future<void> finalizeSetup(String uid, List<String> paymentMethods);
+  Stream<List<Account>> getAccountsStream(String uid);
+  Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId);
   AppUser? get currentAppUser;
 }
 
@@ -92,6 +95,33 @@ class AppUserService implements IAppUserService {
     });
   }
 
+  @override
+  Stream<List<Account>> getAccountsStream(String uid) {
+    return _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('accounts')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => Account.fromJson(doc.data()))
+        .toList());
+  }
+
+  @override
+  Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId) {
+    return _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('accounts')
+        .doc(accountId)
+        .collection('transactions')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => TransactionModel.fromJson(doc.data()))
+        .toList());
+  }
+  
   @override
   AppUser? get currentAppUser => _currentAppUser;
 }

@@ -11,6 +11,6 @@ void configureDependencies() {
   getIt.registerLazySingleton<IAppUserService>(() => AppUserService());
   getIt.registerLazySingleton<IAuthService>(() => AuthService(getIt<IAppUserService>()));
   getIt.registerSingleton<AuthViewModel>(AuthViewModel());
-  getIt.registerSingleton<HomeViewModel>(HomeViewModel());
+  getIt.registerSingleton<HomeViewModel>(HomeViewModel(getIt<IAppUserService>()));
   getIt.registerSingleton<AuthNotifier>(AuthNotifier(getIt<IAuthService>(), getIt<IAppUserService>()));
 }
