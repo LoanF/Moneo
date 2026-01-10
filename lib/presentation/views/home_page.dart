@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/extensions/string_extensions.dart';
 import '../../core/notifiers/auth_notifier.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
@@ -76,6 +77,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildGlobalBalanceHeader(BuildContext context, double balance) {
+    final Color balanceColor = balance < 0 ? AppColors.mainColor : AppColors.mainText;
+    
     return SliverAppBar(
       expandedHeight: 150,
       backgroundColor: AppColors.mainBackground,
@@ -107,7 +110,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 8),
               Text(
                 "${balance.toStringAsFixed(2)} €",
-                style: const TextStyle(color: AppColors.mainText, fontSize: 36, fontWeight: FontWeight.bold),
+                style: TextStyle(color: balanceColor, fontSize: 36, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -151,10 +154,10 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(name, style: TextStyle(color: isSelected ? Colors.white : AppColors.secondaryText, fontSize: 12)),
+          Text(name.capitalize(), style: TextStyle(color: isSelected ? Colors.white : AppColors.secondaryText, fontSize: 12)),
           Text(
             "${amount.toStringAsFixed(2)} €",
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ],
       ),

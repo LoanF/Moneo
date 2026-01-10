@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../core/themes/app_colors.dart';
 import '../../data/models/transaction_model.dart';
 
@@ -15,9 +16,9 @@ class TransactionTile extends StatelessWidget {
         color: AppColors.secondaryBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListTile(
-          tileColor: transaction.isChecked ? AppColors.thirdBackground.withOpacity(0.5) : Colors.transparent,
+          tileColor: transaction.isChecked ? AppColors.thirdBackground.withValues(alpha: 0.5) : Colors.transparent,
           leading: CircleAvatar(
-            backgroundColor: transaction.isChecked ? Colors.green.withOpacity(0.2) : AppColors.thirdBackground,
+            backgroundColor: transaction.isChecked ? Colors.green.withValues(alpha: 0.2) : AppColors.thirdBackground,
             child: Icon(
               transaction.isChecked ? Icons.check : (transaction.amount < 0 ? Icons.shopping_cart : Icons.add_chart),
               color: transaction.isChecked ? Colors.green : AppColors.mainColor,
@@ -28,7 +29,7 @@ class TransactionTile extends StatelessWidget {
             style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w500),
           ),
           subtitle: Text(
-            "${transaction.date.day}/${transaction.date.month}/${transaction.date.year}",
+            DateFormat('dd/MM/yyyy').format(transaction.date),
             style: const TextStyle(color: AppColors.secondaryText),
           ),
           trailing: Text(
