@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
+import 'package:moneo/presentation/views/edit_profile_page.dart';
 import 'package:moneo/presentation/views/home_page.dart';
 import 'package:moneo/presentation/views/settings_page.dart';
+import '../../presentation/views/categories_manager_page.dart';
 import '../../presentation/views/login_page.dart';
 import '../../presentation/views/register_page.dart';
 import '../../presentation/views/setup_page.dart';
@@ -78,6 +80,16 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.setup,
       name: 'setup',
       builder: (context, state) => const SetupPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.categoriesManager,
+      name: 'categoriesManager',
+      builder: (context, state) => const CategoriesManagerPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.profile,
+      name: 'profile',
+      builder: (context, state) => const EditProfilePage(),
     ),
   ],
 );

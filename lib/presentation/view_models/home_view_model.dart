@@ -23,17 +23,24 @@ class HomeViewModel extends CommonViewModel {
 
   double get totalBalance => _accounts.fold(0, (sumaccount, acc) => sumaccount + acc.currentBalance);
 
+  StreamSubscription? _transactionSubscription;
+
   void init(String uid) {
+    if (uid.isEmpty) return;
+
     isLoading = true;
     _accountsSub?.cancel();
+    _transactionsSub?.cancel();
 
     _accountsSub = _userService.getAccountsStream(uid).listen((accountsList) {
       _accounts = accountsList;
 
-      if (_selectedAccount == null && _accounts.isNotEmpty) {
-        selectAccount(uid, _accounts.first);
-      } else if (_selectedAccount != null) {
-        _selectedAccount = _accounts.firstWhere((a) => a.id == _selectedAccount!.id);
+      if (_accounts.isNotEmpty) {
+        if (_selectedAccount == null) {
+          selectAccount(uid, _accounts.first);
+        } else {
+          _selectedAccount = _accounts.firstWhere((a) => a.id == _selectedAccount!.id);
+        }
       }
 
       isLoading = false;
@@ -49,6 +56,19 @@ class HomeViewModel extends CommonViewModel {
       _transactions = transList;
       notifyListeners();
     });
+  }
+
+  void clear() {
+    _accountsSub?.cancel();
+    _transactionsSub?.cancel();
+    _accountsSub = null;
+    _transactionsSub = null;
+
+    _accounts = [];
+    _transactions = [];
+    _selectedAccount = null;
+
+    notifyListeners();
   }
 
   Future<void> addTransaction({

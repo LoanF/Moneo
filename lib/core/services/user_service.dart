@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../data/enums/firebase_collection_enum.dart';
 import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
+import '../../data/models/category_model.dart';
 import '../../data/models/transaction_model.dart';
 
 abstract class IAppUserService {
@@ -15,6 +16,9 @@ abstract class IAppUserService {
   Stream<List<Account>> getAccountsStream(String uid);
   Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId);
   AppUser? get currentAppUser;
+  Future<void> saveCategory(String uid, CategoryModel category);
+  Future<void> deleteCategory(String uid, String categoryId);
+  Stream<List<CategoryModel>> getCategoriesStream(String uid);
 }
 
 class AppUserService implements IAppUserService {
@@ -32,6 +36,8 @@ class AppUserService implements IAppUserService {
 
   @override
   Future<AppUser?> getUserById(String uid) async {
+    if (uid.isEmpty) return null;
+    
     final doc = await usersCollection.doc(uid).get();
     _currentAppUser = doc.data();
     return _currentAppUser;
@@ -78,6 +84,8 @@ class AppUserService implements IAppUserService {
 
   @override
   Future<void> createAccount(String uid, Account account) async {
+    if (uid.isEmpty) return;
+    
     await _firebaseFirestore
         .collection('users')
         .doc(uid)
@@ -88,6 +96,8 @@ class AppUserService implements IAppUserService {
 
   @override
   Future<void> finalizeSetup(String uid, List<String> paymentMethods) async {
+    if (uid.isEmpty) return;
+    
     await _firebaseFirestore.collection('users').doc(uid).update({
       'hasCompletedSetup': true,
       'paymentMethods': paymentMethods,
@@ -97,6 +107,8 @@ class AppUserService implements IAppUserService {
 
   @override
   Stream<List<Account>> getAccountsStream(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    
     return _firebaseFirestore
         .collection('users')
         .doc(uid)
@@ -109,6 +121,8 @@ class AppUserService implements IAppUserService {
 
   @override
   Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId) {
+    if (uid.isEmpty) return Stream.value([]);
+    
     return _firebaseFirestore
         .collection('users')
         .doc(uid)
@@ -124,4 +138,42 @@ class AppUserService implements IAppUserService {
   
   @override
   AppUser? get currentAppUser => _currentAppUser;
+
+  @override
+  Future<void> saveCategory(String uid, CategoryModel category) async {
+    if (uid.isEmpty) return;
+    
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('categories')
+        .doc(category.id)
+        .set(category.toJson());
+  }
+
+  @override
+  Future<void> deleteCategory(String uid, String categoryId) async {
+    if (uid.isEmpty) return;
+    
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('categories')
+        .doc(categoryId)
+        .delete();
+  }
+
+  @override
+  Stream<List<CategoryModel>> getCategoriesStream(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    
+    return _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('categories')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => CategoryModel.fromJson(doc.data()))
+        .toList());
+  }
 }
