@@ -44,4 +44,5 @@ class TransactionModel {
   }
 
   bool get isExpense => amount < 0;
+  bool get isMonthly => id.startsWith('monthly_');
 }

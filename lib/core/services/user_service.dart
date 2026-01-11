@@ -4,19 +4,25 @@ import '../../data/enums/firebase_collection_enum.dart';
 import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
 import '../../data/models/category_model.dart';
-import '../../data/models/transaction_model.dart';
+import '../../data/models/monthly_operation_model.dart';
 
 abstract class IAppUserService {
   Future<AppUser?> getUserById(String uid);
   Future<void> createUser(AppUser user);
   Future<void> updateUser(AppUser user);
   Future<AppUser> updateFcmToken(AppUser appUser);
+  
   Future<void> createAccount(String uid, Account account);
   Future<void> updateAccount(String uid, Account account);
   Future<void> deleteAccount(String uid, String accountId);
   Future<void> updateAccountsOrder(String uid, List<Account> accounts);
-  Future<void> finalizeSetup(String uid, List<String> paymentMethods);
   Stream<List<Account>> getAccountsStream(String uid);
+
+  Future<void> saveMonthlyOperation(String uid, MonthlyOperationModel operation);
+  Future<void> deleteMonthlyOperation(String uid, String operationId);
+  Stream<List<MonthlyOperationModel>> getMonthlyOperationsStream(String uid);
+  Future<void> checkAndApplyMonthlyOperations(String uid);
+  
   Future<QuerySnapshot<Map<String, dynamic>>> getTransactionsPaginated({
     required String uid,
     required String accountId,
@@ -24,10 +30,13 @@ abstract class IAppUserService {
     DocumentSnapshot? startAfter,
     bool hideChecked = false,
   });
-  AppUser? get currentAppUser;
+  
   Future<void> saveCategory(String uid, CategoryModel category);
   Future<void> deleteCategory(String uid, String categoryId);
   Stream<List<CategoryModel>> getCategoriesStream(String uid);
+
+  Future<void> finalizeSetup(String uid, List<String> paymentMethods);
+  AppUser? get currentAppUser;
 }
 
 class AppUserService implements IAppUserService {
@@ -233,5 +242,97 @@ class AppUserService implements IAppUserService {
         .map((snapshot) => snapshot.docs
         .map((doc) => CategoryModel.fromJson(doc.data()))
         .toList());
+  }
+
+  @override
+  Future<void> saveMonthlyOperation(String uid, MonthlyOperationModel operation) async {
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('monthly_operations')
+        .doc(operation.id)
+        .set(operation.toJson());
+  }
+
+  @override
+  Stream<List<MonthlyOperationModel>> getMonthlyOperationsStream(String uid) {
+    return _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('monthly_operations')
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => MonthlyOperationModel.fromJson(doc.data())).toList());
+  }
+
+  @override
+  Future<void> deleteMonthlyOperation(String uid, String operationId) async {
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('monthly_operations')
+        .doc(operationId)
+        .delete();
+  }
+
+  @override
+  Future<void> checkAndApplyMonthlyOperations(String uid) async {
+    if (uid.isEmpty) return;
+
+    final now = DateTime.now();
+    final currentMonthStr = "${now.month}-${now.year}";
+
+    final operationsSnapshot = await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('monthly_operations')
+        .get();
+
+    final operations = operationsSnapshot.docs
+        .map((doc) => MonthlyOperationModel.fromJson(doc.data()))
+        .toList();
+
+    for (var op in operations) {
+      if (op.lastAppliedMonth == currentMonthStr) continue;
+
+      final amount = op.amounts[now.month - 1];
+      if (amount <= 0) continue;
+
+      final finalAmount = op.isExpense ? -amount : amount;
+      final transactionId = "monthly_${op.id}_$currentMonthStr";
+
+      final transactionRef = _firebaseFirestore
+          .collection('users').doc(uid)
+          .collection('accounts').doc(op.accountId)
+          .collection('transactions').doc(transactionId);
+
+      final accountRef = _firebaseFirestore
+          .collection('users').doc(uid)
+          .collection('accounts').doc(op.accountId);
+
+      final monthlyOpRef = _firebaseFirestore
+          .collection('users').doc(uid)
+          .collection('monthly_operations').doc(op.id);
+
+      await _firebaseFirestore.runTransaction((transaction) async {
+        final accountSnap = await transaction.get(accountRef);
+
+        transaction.set(transactionRef, {
+          'id': transactionId,
+          'title': op.title,
+          'amount': finalAmount,
+          'category': op.categoryId,
+          'accountId': op.accountId,
+          'date': Timestamp.fromDate(DateTime(now.year, now.month, 1)),
+          'isChecked': false,
+        });
+
+        if (accountSnap.exists) {
+          double currentBalance = (accountSnap.data()?['currentBalance'] ?? 0.0).toDouble();
+          transaction.update(accountRef, {'currentBalance': currentBalance + finalAmount});
+        }
+
+        transaction.update(monthlyOpRef, {'lastAppliedMonth': currentMonthStr});
+      });
+    }
   }
 }

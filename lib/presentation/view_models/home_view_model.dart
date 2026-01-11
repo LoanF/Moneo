@@ -34,10 +34,17 @@ class HomeViewModel extends CommonViewModel {
   
   double get totalBalance => _accounts.fold(0, (sumaccount, acc) => sumaccount + acc.currentBalance);
 
-  void init(String uid) {
+  Future<void> init(String uid) async {
     if (uid.isEmpty) return;
-
+    
     isLoading = true;
+    
+    try {
+      await _userService.checkAndApplyMonthlyOperations(uid);
+    } catch (e) {
+      errorMessage = "Erreur lors de l'application des mensualités";
+    }
+
     _accountsSub?.cancel();
     _categoriesSub?.cancel();
 
@@ -49,9 +56,11 @@ class HomeViewModel extends CommonViewModel {
         } else {
           _selectedAccount = _accounts.firstWhere((a) => a.id == _selectedAccount!.id);
           isLoading = false;
+          notifyListeners();
         }
       } else {
         isLoading = false;
+        notifyListeners();
       }
     });
 
@@ -72,6 +81,8 @@ class HomeViewModel extends CommonViewModel {
 
   Future<void> loadTransactions(String uid) async {
     if (!_hasMore || _isLoadingMore || _selectedAccount == null) return;
+
+    if (_transactions.isEmpty && isLoading && _lastDocument != null) return;
 
     if (_transactions.isEmpty) {
       isLoading = true;
@@ -98,7 +109,11 @@ class HomeViewModel extends CommonViewModel {
         final newTransactions = snapshot.docs
             .map((doc) => TransactionModel.fromJson(doc.data()))
             .toList();
-        _transactions.addAll(newTransactions);
+        
+        final existingIds = _transactions.map((t) => t.id).toSet();
+        final uniqueNewOnes = newTransactions.where((t) => !existingIds.contains(t.id)).toList();
+
+        _transactions.addAll(uniqueNewOnes);
       }
     } catch (e) {
       errorMessage = "Erreur de chargement : $e";

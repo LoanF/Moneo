@@ -21,7 +21,7 @@ class TransactionTile extends StatelessWidget {
     final int iconToDisplay = hasValidIcon
         ? categoryIcon!
         : Icons.help_outline_rounded.codePoint;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: transaction.isChecked ? AppColors.thirdBackground.withValues(alpha: 0.3) : AppColors.secondaryBackground,
@@ -43,14 +43,47 @@ class TransactionTile extends StatelessWidget {
             size: 24,
           ),
         ),
-        title: Text(
-          transaction.title,
-          style: TextStyle(
-            color: AppColors.mainText.withValues(alpha: transaction.isChecked ? 0.5 : 1.0),
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            decoration: transaction.isChecked ? TextDecoration.lineThrough : null,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                transaction.title,
+                style: TextStyle(
+                  color: AppColors.mainText.withValues(alpha: transaction.isChecked ? 0.5 : 1.0),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  decoration: transaction.isChecked ? TextDecoration.lineThrough : null,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (transaction.isMonthly) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.mainColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_month_rounded, size: 10, color: AppColors.mainColor),
+                    const SizedBox(width: 4),
+                    const Text(
+                      "MENSUEL",
+                      style: TextStyle(
+                        color: AppColors.mainColor,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
         subtitle: Text(
           DateFormat.yMMMMd().format(transaction.date),

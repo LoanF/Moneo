@@ -107,6 +107,12 @@ class SettingsPage extends StatelessWidget {
                 iconColor: Colors.blue,
                 onTap: () => context.push(AppRoutes.accountsManager),
               ),
+              _buildNavigationItem(
+                label: "Mensualisations",
+                icon: Icons.calendar_month_rounded,
+                iconColor: Colors.green,
+                onTap: () => context.push(AppRoutes.monthlyOperations),
+              ),
             ]),
 
             _buildSectionHeader("Préférences"),

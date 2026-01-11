@@ -7,4 +7,5 @@ class AppRoutes {
   static const String categoriesManager = '/categoriesManager';
   static const String profile = '/profile';
   static const String accountsManager = '/accountsManager';
+  static const String monthlyOperations = '/monthlyOperations';
 }
