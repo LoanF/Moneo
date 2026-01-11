@@ -105,7 +105,7 @@ class SettingsPage extends StatelessWidget {
                 label: "Comptes bancaires",
                 icon: Icons.account_balance_wallet_rounded,
                 iconColor: Colors.blue,
-                onTap: () {},
+                onTap: () => context.push(AppRoutes.accountsManager),
               ),
             ]),
 

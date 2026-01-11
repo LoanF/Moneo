@@ -12,6 +12,9 @@ abstract class IAppUserService {
   Future<void> updateUser(AppUser user);
   Future<AppUser> updateFcmToken(AppUser appUser);
   Future<void> createAccount(String uid, Account account);
+  Future<void> updateAccount(String uid, Account account);
+  Future<void> deleteAccount(String uid, String accountId);
+  Future<void> updateAccountsOrder(String uid, List<Account> accounts);
   Future<void> finalizeSetup(String uid, List<String> paymentMethods);
   Stream<List<Account>> getAccountsStream(String uid);
   Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId);
@@ -95,6 +98,44 @@ class AppUserService implements IAppUserService {
   }
 
   @override
+  Future<void> updateAccount(String uid, Account account) async {
+    if (uid.isEmpty) return;
+
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('accounts')
+        .doc(account.id)
+        .update(account.toJson());
+  }
+
+  @override
+  Future<void> deleteAccount(String uid, String accountId) async {
+    if (uid.isEmpty) return;
+
+    await _firebaseFirestore
+        .collection('users')
+        .doc(uid)
+        .collection('accounts')
+        .doc(accountId)
+        .delete();
+  }
+
+  @override
+  Future<void> updateAccountsOrder(String uid, List<Account> accounts) async {
+    final batch = _firebaseFirestore.batch();
+    for (int i = 0; i < accounts.length; i++) {
+      final docRef = _firebaseFirestore
+          .collection('users')
+          .doc(uid)
+          .collection('accounts')
+          .doc(accounts[i].id);
+      batch.update(docRef, {'order': i});
+    }
+    await batch.commit();
+  }
+  
+  @override
   Future<void> finalizeSetup(String uid, List<String> paymentMethods) async {
     if (uid.isEmpty) return;
     
@@ -108,11 +149,12 @@ class AppUserService implements IAppUserService {
   @override
   Stream<List<Account>> getAccountsStream(String uid) {
     if (uid.isEmpty) return Stream.value([]);
-    
+
     return _firebaseFirestore
         .collection('users')
         .doc(uid)
         .collection('accounts')
+        .orderBy('order')
         .snapshots()
         .map((snapshot) => snapshot.docs
         .map((doc) => Account.fromJson(doc.data()))

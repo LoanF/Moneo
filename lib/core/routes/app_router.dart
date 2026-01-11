@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:moneo/presentation/views/accounts_manager_page.dart';
 import 'package:moneo/presentation/views/edit_profile_page.dart';
 import 'package:moneo/presentation/views/home_page.dart';
 import 'package:moneo/presentation/views/settings_page.dart';
@@ -90,6 +91,11 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.profile,
       name: 'profile',
       builder: (context, state) => const EditProfilePage(),
+    ),
+    GoRoute(
+      path: AppRoutes.accountsManager,
+      name: 'accountsManager',
+      builder: (context, state) => const AccountsManagerPage(),
     ),
   ],
 );
