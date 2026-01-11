@@ -11,7 +11,12 @@ class HomeViewModel extends CommonViewModel {
   List<Account> _accounts = [];
   List<TransactionModel> _transactions = [];
   Account? _selectedAccount;
-
+  
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  bool _hideChecked = true;
+  
   StreamSubscription? _accountsSub;
   StreamSubscription? _transactionsSub;
 
@@ -20,21 +25,20 @@ class HomeViewModel extends CommonViewModel {
   List<Account> get accounts => _accounts;
   List<TransactionModel> get transactions => _transactions;
   Account? get selectedAccount => _selectedAccount;
-
+  bool get hideChecked => _hideChecked;
+  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMore => _hasMore;
+  
   double get totalBalance => _accounts.fold(0, (sumaccount, acc) => sumaccount + acc.currentBalance);
-
-  StreamSubscription? _transactionSubscription;
 
   void init(String uid) {
     if (uid.isEmpty) return;
 
     isLoading = true;
     _accountsSub?.cancel();
-    _transactionsSub?.cancel();
 
     _accountsSub = _userService.getAccountsStream(uid).listen((accountsList) {
       _accounts = accountsList;
-
       if (_accounts.isNotEmpty) {
         if (_selectedAccount == null) {
           selectAccount(uid, _accounts.first);
@@ -42,33 +46,129 @@ class HomeViewModel extends CommonViewModel {
           _selectedAccount = _accounts.firstWhere((a) => a.id == _selectedAccount!.id);
         }
       }
-
       isLoading = false;
-    });
-  }
-
-  void selectAccount(String uid, Account account) {
-    _selectedAccount = account;
-    notifyListeners();
-
-    _transactionsSub?.cancel();
-    _transactionsSub = _userService.getTransactionsStream(uid, account.id).listen((transList) {
-      _transactions = transList;
       notifyListeners();
     });
   }
 
+  Future<void> selectAccount(String uid, Account account) async {
+    _selectedAccount = account;
+    _transactions = [];
+    _lastDocument = null;
+    _hasMore = true;
+    notifyListeners();
+    await loadTransactions(uid);
+  }
+
+  Future<void> loadTransactions(String uid) async {
+    if (!_hasMore || isLoading || _isLoadingMore || _selectedAccount == null) return;
+
+    if (_transactions.isEmpty) {
+      isLoading = true;
+    } else {
+      _isLoadingMore = true;
+    }
+    notifyListeners();
+
+    try {
+      final snapshot = await _userService.getTransactionsPaginated(
+        uid: uid,
+        accountId: _selectedAccount!.id,
+        limit: 20,
+        startAfter: _lastDocument,
+        hideChecked: _hideChecked,
+      );
+
+      if (snapshot.docs.length < 20) {
+        _hasMore = false;
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastDocument = snapshot.docs.last;
+        final newTransactions = snapshot.docs
+            .map((doc) => TransactionModel.fromJson(doc.data()))
+            .toList();
+        _transactions.addAll(newTransactions);
+      }
+    } catch (e) {
+      errorMessage = "Erreur de chargement : $e";
+    } finally {
+      isLoading = false;
+      _isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleHideChecked(String uid) async {
+    _hideChecked = !_hideChecked;
+    _transactions = [];
+    _lastDocument = null;
+    _hasMore = true;
+    await loadTransactions(uid);
+  }
+
+  Future<void> toggleCheckTransaction(String uid, String accountId, TransactionModel transaction) async {
+    try {
+      final index = _transactions.indexWhere((t) => t.id == transaction.id);
+      if (index != -1) {
+        final newStatus = !transaction.isChecked;
+
+        await FirebaseFirestore.instance
+            .collection('users').doc(uid)
+            .collection('accounts').doc(accountId)
+            .collection('transactions').doc(transaction.id)
+            .update({'isChecked': newStatus});
+
+        if (_hideChecked && newStatus) {
+          _transactions.removeAt(index);
+        } else {
+          _transactions[index].isChecked = newStatus;
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      errorMessage = "Erreur lors du pointage : $e";
+    }
+  }
+
+  Future<void> deleteTransaction(String uid, String accountId, TransactionModel transaction) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final accountRef = firestore.collection('users').doc(uid).collection('accounts').doc(accountId);
+
+      await firestore.runTransaction((dbTransaction) async {
+        final snapshot = await dbTransaction.get(accountRef);
+        if (snapshot.exists) {
+          double currentBalance = (snapshot.data()?['currentBalance'] ?? 0.0).toDouble();
+          dbTransaction.update(accountRef, {'currentBalance': currentBalance - transaction.amount});
+        }
+        dbTransaction.delete(accountRef.collection('transactions').doc(transaction.id));
+      });
+
+      _transactions.removeWhere((t) => t.id == transaction.id);
+      notifyListeners();
+    } catch (e) {
+      errorMessage = "Erreur de suppression : $e";
+      notifyListeners();
+    }
+  }
+
   void clear() {
     _accountsSub?.cancel();
-    _transactionsSub?.cancel();
     _accountsSub = null;
-    _transactionsSub = null;
-
     _accounts = [];
     _transactions = [];
     _selectedAccount = null;
-
+    _lastDocument = null;
+    _hasMore = true;
+    _hideChecked = true;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _accountsSub?.cancel();
+    super.dispose();
   }
 
   Future<void> addTransaction({
@@ -169,41 +269,10 @@ class HomeViewModel extends CommonViewModel {
     }
   }
 
-  Future<void> deleteTransaction(String uid, String accountId, TransactionModel transaction) async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-      final accountRef = firestore.collection('users').doc(uid).collection('accounts').doc(accountId);
-
-      await firestore.runTransaction((dbTransaction) async {
-        final snapshot = await dbTransaction.get(accountRef);
-        if (snapshot.exists) {
-          double currentBalance = (snapshot.data()?['currentBalance'] ?? 0.0).toDouble();
-          dbTransaction.update(accountRef, {'currentBalance': currentBalance - transaction.amount});
-        }
-        dbTransaction.delete(accountRef.collection('transactions').doc(transaction.id));
-      });
-    } catch (e) {
-      errorMessage = "Erreur lors de la suppression : $e";
-      notifyListeners();
+  List<TransactionModel> get filteredTransactions {
+    if (_hideChecked) {
+      return _transactions.where((t) => !t.isChecked).toList();
     }
-  }
-
-  Future<void> toggleCheckTransaction(String uid, String accountId, String transactionId, bool isChecked) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('users').doc(uid)
-          .collection('accounts').doc(accountId)
-          .collection('transactions').doc(transactionId)
-          .update({'isChecked': !isChecked});
-    } catch (e) {
-      errorMessage = "Erreur lors du pointage : $e";
-    }
-  }
-  
-  @override
-  void dispose() {
-    _accountsSub?.cancel();
-    _transactionsSub?.cancel();
-    super.dispose();
+    return _transactions;
   }
 }

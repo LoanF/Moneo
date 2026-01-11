@@ -17,7 +17,13 @@ abstract class IAppUserService {
   Future<void> updateAccountsOrder(String uid, List<Account> accounts);
   Future<void> finalizeSetup(String uid, List<String> paymentMethods);
   Stream<List<Account>> getAccountsStream(String uid);
-  Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId);
+  Future<QuerySnapshot<Map<String, dynamic>>> getTransactionsPaginated({
+    required String uid,
+    required String accountId,
+    required int limit,
+    DocumentSnapshot? startAfter,
+    bool hideChecked = false,
+  });
   AppUser? get currentAppUser;
   Future<void> saveCategory(String uid, CategoryModel category);
   Future<void> deleteCategory(String uid, String categoryId);
@@ -162,20 +168,30 @@ class AppUserService implements IAppUserService {
   }
 
   @override
-  Stream<List<TransactionModel>> getTransactionsStream(String uid, String accountId) {
-    if (uid.isEmpty) return Stream.value([]);
-    
-    return _firebaseFirestore
+  Future<QuerySnapshot<Map<String, dynamic>>> getTransactionsPaginated({
+    required String uid,
+    required String accountId,
+    required int limit,
+    DocumentSnapshot? startAfter,
+    bool hideChecked = false,
+  }) async {
+    Query<Map<String, dynamic>> query = _firebaseFirestore
         .collection('users')
         .doc(uid)
         .collection('accounts')
         .doc(accountId)
         .collection('transactions')
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-        .map((doc) => TransactionModel.fromJson(doc.data()))
-        .toList());
+        .orderBy('date', descending: true);
+
+    if (hideChecked) {
+      query = query.where('isChecked', isEqualTo: false);
+    }
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    return await query.limit(limit).get();
   }
   
   @override

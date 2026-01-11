@@ -22,10 +22,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _userService = getIt<IAppUserService>();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authNotifier = context.read<AuthNotifier>();
       final homeViewModel = context.read<HomeViewModel>();
@@ -33,6 +35,22 @@ class _HomePageState extends State<HomePage> {
         homeViewModel.init(authNotifier.appUser!.uid);
       }
     });
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
+      final authNotifier = context.read<AuthNotifier>();
+      final homeViewModel = context.read<HomeViewModel>();
+      if (authNotifier.appUser != null) {
+        homeViewModel.loadTransactions(authNotifier.appUser!.uid);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -49,6 +67,7 @@ class _HomePageState extends State<HomePage> {
             final categories = catSnapshot.data ?? [];
 
             return CustomScrollView(
+              controller: _scrollController,
               physics: const BouncingScrollPhysics(),
               slivers: [
                 _buildGlobalBalanceHeader(context, homeViewModel.totalBalance),
@@ -59,18 +78,22 @@ class _HomePageState extends State<HomePage> {
 
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          "Transactions récentes",
+                          "Transactions",
                           style: TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text("Voir tout", style: TextStyle(color: AppColors.mainColor)),
-                        )
+                        IconButton(
+                          onPressed: () => homeViewModel.toggleHideChecked(uid),
+                          icon: Icon(
+                            homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                            color: homeViewModel.hideChecked ? AppColors.grey1 : AppColors.mainColor,
+                            size: 20,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -166,9 +189,6 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: isSelected ? AppColors.mainColor : AppColors.secondaryBackground,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: isSelected ? [
-          BoxShadow(color: AppColors.mainColor.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))
-        ] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +209,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTransactionList(HomeViewModel vm, String uid, List<CategoryModel> categories) {
-    if (vm.transactions.isEmpty) {
+    final transactions = vm.transactions;
+
+    if (vm.isLoading && transactions.isEmpty) {
+      return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+    }
+
+    if (transactions.isEmpty) {
       return const SliverFillRemaining(
         hasScrollBody: false,
         child: Center(child: Text("Aucune opération", style: TextStyle(color: AppColors.secondaryText))),
@@ -199,15 +225,16 @@ class _HomePageState extends State<HomePage> {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
             (context, index) {
-          final trans = vm.transactions[index];
+          if (index >= transactions.length) return null;
+          final trans = transactions[index];
 
           final categoryData = categories.firstWhere(
                 (c) => c.name.trim().toLowerCase() == trans.category?.trim().toLowerCase(),
             orElse: () => CategoryModel(
-                id: '',
-                name: 'Autre',
-                iconCode: Icons.help_outline_rounded.codePoint,
-                colorValue: AppColors.grey1.toARGB32()
+              id: '',
+              name: 'Autre',
+              iconCode: Icons.help_outline_rounded.codePoint,
+              colorValue: AppColors.grey1.toARGB32(),
             ),
           );
 
@@ -219,7 +246,7 @@ class _HomePageState extends State<HomePage> {
               secondaryBackground: _buildSwipeAction(AppColors.primaryRed, Icons.delete, Alignment.centerRight),
               confirmDismiss: (direction) async {
                 if (direction == DismissDirection.startToEnd) {
-                  await vm.toggleCheckTransaction(uid, vm.selectedAccount!.id, trans.id, trans.isChecked);
+                  await vm.toggleCheckTransaction(uid, vm.selectedAccount!.id, trans);
                   return false;
                 }
                 return await _showDeleteConfirmation(context);
@@ -233,7 +260,7 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
-        childCount: vm.transactions.length,
+        childCount: transactions.length,
       ),
     );
   }
