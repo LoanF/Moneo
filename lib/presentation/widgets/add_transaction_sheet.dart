@@ -6,18 +6,21 @@ import '../../core/services/user_service.dart';
 import '../../core/themes/app_colors.dart';
 import '../../data/models/account_model.dart';
 import '../../data/models/category_model.dart';
+import '../../data/models/transaction_model.dart';
 import '../view_models/home_view_model.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   final String uid;
   final List<Account> accounts;
   final Account selectedAccount;
+  final TransactionModel? transaction;
 
   const AddTransactionSheet({
     super.key,
     required this.uid,
     required this.accounts,
     required this.selectedAccount,
+    this.transaction,
   });
 
   @override
@@ -36,6 +39,50 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Account? _targetAccount;
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.transaction != null) {
+      _titleController.text = widget.transaction!.title;
+      _amountController.text = widget.transaction!.amount.abs().toStringAsFixed(2);
+      _isExpense = widget.transaction!.amount < 0;
+      _selectedDate = widget.transaction!.date;
+      _isTransfer = widget.transaction!.category == 'Transfert';
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _setInitialCategory();
+      });
+    }
+  }
+
+  void _setInitialCategory() {
+    if (widget.transaction?.category == null || _isTransfer) return;
+
+    final categories = context.read<HomeViewModel>().categories;
+    final categoryId = widget.transaction!.category!;
+
+    try {
+      if (categoryId.startsWith('other_')) {
+        final parentId = categoryId.replaceFirst('other_', '');
+        _selectedParent = categories.firstWhere((c) => c.id == parentId);
+        _selectedSub = null;
+      } else {
+        final currentCat = categories.firstWhere((c) => c.id == categoryId);
+
+        if (currentCat.parentId == null) {
+          _selectedParent = currentCat;
+          _selectedSub = null;
+        } else {
+          _selectedParent = categories.firstWhere((c) => c.id == currentCat.parentId);
+          _selectedSub = currentCat;
+        }
+      }
+      setState(() {});
+    } catch (e) {
+      // Catégorie non trouvée dans la liste, on ne fait rien
+    }
+  }
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
@@ -96,7 +143,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               ),
               TextField(
                 controller: _amountController,
-                autofocus: true,
+                autofocus: widget.transaction != null ? false : true,
                 textAlign: TextAlign.center,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: TextStyle(
@@ -383,15 +430,26 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             finalCategoryName = _selectedParent!.name;
           }
         }
-  
-        await homeViewModel.addTransaction(
-          uid: widget.uid,
-          accountId: widget.selectedAccount.id,
-          title: _titleController.text.isEmpty ? finalCategoryName : _titleController.text,
-          amount: finalAmount,
-          category: finalCategoryId,
-          date: _selectedDate,
-        );
+
+        if (widget.transaction != null) {
+          await homeViewModel.updateTransaction(
+            uid: widget.uid,
+            oldTransaction: widget.transaction!,
+            title: _titleController.text,
+            amount: finalAmount,
+            category: finalCategoryId,
+            date: _selectedDate,
+          );
+        } else {
+          await homeViewModel.addTransaction(
+            uid: widget.uid,
+            accountId: widget.selectedAccount.id,
+            title: _titleController.text.isEmpty ? finalCategoryName : _titleController.text,
+            amount: finalAmount,
+            category: finalCategoryId,
+            date: _selectedDate,
+          );
+        }
       }
   
       if (mounted) Navigator.pop(context);

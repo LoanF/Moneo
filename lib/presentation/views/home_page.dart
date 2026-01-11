@@ -9,6 +9,7 @@ import '../../core/services/user_service.dart';
 import '../../core/di.dart';
 import '../../data/models/account_model.dart';
 import '../../data/models/category_model.dart';
+import '../../data/models/transaction_model.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/add_transaction_sheet.dart';
 import '../widgets/transaction_tile.dart';
@@ -271,10 +272,14 @@ class _HomePageState extends State<HomePage> {
                 return await _showDeleteConfirmation(context);
               },
               onDismissed: (_) => vm.deleteTransaction(uid, vm.selectedAccount!.id, trans),
-              child: TransactionTile(
-                transaction: trans,
-                categoryIcon: categoryData.iconCode,
-                categoryColor: categoryData.colorValue,
+              child: InkWell(
+                onTap: () => _showAddTransactionModal(context, transaction: trans),
+                borderRadius: BorderRadius.circular(20),
+                child: TransactionTile(
+                  transaction: trans,
+                  categoryIcon: categoryData.iconCode,
+                  categoryColor: categoryData.colorValue,
+                ),
               ),
             ),
           );
@@ -313,7 +318,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showAddTransactionModal(BuildContext context) {
+  void _showAddTransactionModal(BuildContext context, {TransactionModel? transaction}) {
     final homeViewModel = context.read<HomeViewModel>();
     final authNotifier = context.read<AuthNotifier>();
 
@@ -330,6 +335,7 @@ class _HomePageState extends State<HomePage> {
         uid: authNotifier.appUser!.uid,
         accounts: homeViewModel.accounts,
         selectedAccount: homeViewModel.selectedAccount!,
+        transaction: transaction,
       ),
     );
   }

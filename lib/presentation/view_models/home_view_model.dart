@@ -290,6 +290,52 @@ class HomeViewModel extends CommonViewModel {
     }
   }
 
+  Future<void> updateTransaction({
+    required String uid,
+    required TransactionModel oldTransaction,
+    required String title,
+    required double amount,
+    required String category,
+    required DateTime date,
+  }) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final accountRef = firestore.collection('users').doc(uid).collection('accounts').doc(oldTransaction.accountId);
+      final transactionRef = accountRef.collection('transactions').doc(oldTransaction.id);
+
+      final updatedTransaction = TransactionModel(
+        id: oldTransaction.id,
+        title: title,
+        amount: amount,
+        category: category,
+        accountId: oldTransaction.accountId,
+        date: date,
+        isChecked: oldTransaction.isChecked,
+      );
+
+      await firestore.runTransaction((transaction) async {
+        final accountSnap = await transaction.get(accountRef);
+
+        transaction.update(transactionRef, updatedTransaction.toJson());
+
+        if (accountSnap.exists) {
+          double currentBalance = (accountSnap.data()?['currentBalance'] ?? 0.0).toDouble();
+          double newBalance = currentBalance - oldTransaction.amount + amount;
+          transaction.update(accountRef, {'currentBalance': newBalance});
+        }
+      });
+
+      final index = _transactions.indexWhere((t) => t.id == oldTransaction.id);
+      if (index != -1) {
+        _transactions[index] = updatedTransaction;
+        notifyListeners();
+      }
+    } catch (e) {
+      errorMessage = "Erreur lors de la modification : $e";
+      notifyListeners();
+    }
+  }
+  
   List<TransactionModel> get filteredTransactions {
     if (_hideChecked) {
       return _transactions.where((t) => !t.isChecked).toList();

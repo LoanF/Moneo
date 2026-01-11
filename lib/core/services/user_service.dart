@@ -5,6 +5,7 @@ import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/monthly_operation_model.dart';
+import '../../data/models/transaction_model.dart';
 
 abstract class IAppUserService {
   Future<AppUser?> getUserById(String uid);
@@ -30,6 +31,7 @@ abstract class IAppUserService {
     DocumentSnapshot? startAfter,
     bool hideChecked = false,
   });
+  Future<void> updateTransaction(String uid, TransactionModel transaction);
   
   Future<void> saveCategory(String uid, CategoryModel category);
   Future<void> deleteCategory(String uid, String categoryId);
@@ -201,6 +203,16 @@ class AppUserService implements IAppUserService {
     }
 
     return await query.limit(limit).get();
+  }
+
+  @override
+  Future<void> updateTransaction(String uid, TransactionModel transaction) async {
+    if (uid.isEmpty) return;
+    await _firebaseFirestore
+        .collection('users').doc(uid)
+        .collection('accounts').doc(transaction.accountId)
+        .collection('transactions').doc(transaction.id)
+        .update(transaction.toJson());
   }
   
   @override
