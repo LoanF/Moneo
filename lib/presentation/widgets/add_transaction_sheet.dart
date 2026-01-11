@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/di.dart';
 import '../../core/services/user_service.dart';
@@ -33,6 +34,35 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   CategoryModel? _selectedParent;
   CategoryModel? _selectedSub;
   Account? _targetAccount;
+  DateTime _selectedDate = DateTime.now();
+  bool _isSubmitting = false;
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.mainColor,
+              onPrimary: Colors.white,
+              surface: AppColors.secondaryBackground,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -101,7 +131,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               TextField(
                 controller: _titleController,
                 style: const TextStyle(color: AppColors.mainText),
@@ -113,7 +143,30 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _selectDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.thirdBackground,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, color: AppColors.grey1, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        DateFormat.yMMMMd().format(_selectedDate),
+                        style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.edit_calendar_rounded, color: AppColors.mainColor, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               if (_isTransfer) ...[
                 const Text("Vers le compte", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 12),
@@ -129,8 +182,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     backgroundColor: _isTransfer ? Colors.blueAccent : (_isExpense ? AppColors.mainColor : AppColors.primaryGreen),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
-                  onPressed: _submit,
-                  child: const Text("Valider l'opération", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  ) : const Text("Valider l'opération", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
             ],
@@ -188,7 +246,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         final allCats = snapshot.data!;
         final mainCats = allCats.where((c) => c.parentId == null).toList();
         List<CategoryModel> subCats = _selectedParent == null ? [] : allCats.where((c) => c.parentId == _selectedParent!.id).toList();
-        
+
         if (_selectedParent != null && subCats.isNotEmpty) {
           subCats.add(CategoryModel(
             id: "other_${_selectedParent!.id}",
@@ -232,10 +290,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             onTap: () {
               setState(() {
                 if (isParentList) {
-                  _selectedParent = cat;
-                  _selectedSub = null;
+                  if (_selectedParent?.id == cat.id) {
+                  } else {
+                    _selectedParent = cat;
+                    _selectedSub = null;
+                  }
                 } else {
-                  _selectedSub = cat;
+                  if (_selectedSub?.id == cat.id) {
+                    _selectedSub = null;
+                  } else {
+                    _selectedSub = cat;
+                  }
                 }
               });
             },
@@ -280,34 +345,60 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   void _submit() async {
+    if (_isSubmitting) return;
+    
     final homeViewModel = context.read<HomeViewModel>();
     final amount = double.tryParse(_amountController.text.replaceAll(',', '.'))?.abs() ?? 0;
 
     if (amount <= 0) return;
 
-    if (_isTransfer) {
-      if (_targetAccount != null) {
-        await homeViewModel.addTransfer(
+    setState(() => _isSubmitting = true);
+
+    try {
+      if (_isTransfer) {
+        if (_targetAccount != null) {
+          await homeViewModel.addTransfer(
+            uid: widget.uid,
+            sourceAccountId: widget.selectedAccount.id,
+            targetAccountId: _targetAccount!.id,
+            title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
+            amount: amount,
+            date: _selectedDate,
+          );
+        }
+      } else {
+        final finalAmount = _isExpense ? -amount : amount;
+        
+        String finalCategoryId = "autre";
+        String finalCategoryName = "Autre";
+  
+        if (_selectedParent != null) {
+          final hasSubCats = homeViewModel.categories.any((c) => c.parentId == _selectedParent!.id);
+  
+          if (hasSubCats) {
+            finalCategoryId = _selectedSub?.id ?? "other_${_selectedParent!.id}";
+            finalCategoryName = _selectedSub?.name ?? "Autre";
+          } else {
+            finalCategoryId = _selectedParent!.id;
+            finalCategoryName = _selectedParent!.name;
+          }
+        }
+  
+        await homeViewModel.addTransaction(
           uid: widget.uid,
-          sourceAccountId: widget.selectedAccount.id,
-          targetAccountId: _targetAccount!.id,
-          title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
-          amount: amount,
+          accountId: widget.selectedAccount.id,
+          title: _titleController.text.isEmpty ? finalCategoryName : _titleController.text,
+          amount: finalAmount,
+          category: finalCategoryId,
+          date: _selectedDate,
         );
       }
-    } else {
-      final finalAmount = _isExpense ? -amount : amount;
-      final categoryToSave = _selectedSub?.name ?? _selectedParent?.name ?? "Autre";
-
-      await homeViewModel.addTransaction(
-        uid: widget.uid,
-        accountId: widget.selectedAccount.id,
-        title: _titleController.text.isEmpty ? categoryToSave : _titleController.text,
-        amount: finalAmount,
-        category: categoryToSave,
-      );
+  
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
-
-    if (mounted) Navigator.pop(context);
   }
 }

@@ -229,13 +229,32 @@ class _HomePageState extends State<HomePage> {
           final trans = transactions[index];
 
           final categoryData = categories.firstWhere(
-                (c) => c.name.trim().toLowerCase() == trans.category?.trim().toLowerCase(),
-            orElse: () => CategoryModel(
-              id: '',
-              name: 'Autre',
-              iconCode: Icons.help_outline_rounded.codePoint,
-              colorValue: AppColors.grey1.toARGB32(),
-            ),
+                (c) => c.id == trans.category,
+            orElse: () {
+              if (trans.category != null && trans.category!.startsWith('other_')) {
+                final parentId = trans.category!.replaceFirst('other_', '');
+                try {
+                  return categories.firstWhere((c) => c.id == parentId);
+                } catch (_) {}
+              }
+
+              return categories.firstWhere(
+                    (c) => c.name.trim().toLowerCase() == trans.category?.trim().toLowerCase(),
+                orElse: () => trans.category == 'Transfert'
+                    ? CategoryModel(
+                  id: 'transfer',
+                  name: 'Transfert',
+                  iconCode: Icons.swap_horiz_rounded.codePoint,
+                  colorValue: Colors.blue.toARGB32(),
+                )
+                    : CategoryModel(
+                  id: 'autre',
+                  name: 'Autre',
+                  iconCode: Icons.help_outline_rounded.codePoint,
+                  colorValue: AppColors.grey1.toARGB32(),
+                ),
+              );
+            },
           );
 
           return Padding(

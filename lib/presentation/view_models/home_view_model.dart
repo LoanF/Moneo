@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/services/user_service.dart';
 import '../../data/models/account_model.dart';
+import '../../data/models/category_model.dart';
 import '../../data/models/transaction_model.dart';
 import 'common_view_model.dart';
 
@@ -10,6 +11,7 @@ class HomeViewModel extends CommonViewModel {
 
   List<Account> _accounts = [];
   List<TransactionModel> _transactions = [];
+  List<CategoryModel> _categories = [];
   Account? _selectedAccount;
   
   DocumentSnapshot? _lastDocument;
@@ -18,12 +20,13 @@ class HomeViewModel extends CommonViewModel {
   bool _hideChecked = true;
   
   StreamSubscription? _accountsSub;
-  StreamSubscription? _transactionsSub;
+  StreamSubscription? _categoriesSub;
 
   HomeViewModel(this._userService);
 
   List<Account> get accounts => _accounts;
   List<TransactionModel> get transactions => _transactions;
+  List<CategoryModel> get categories => _categories;
   Account? get selectedAccount => _selectedAccount;
   bool get hideChecked => _hideChecked;
   bool get isLoadingMore => _isLoadingMore;
@@ -36,6 +39,7 @@ class HomeViewModel extends CommonViewModel {
 
     isLoading = true;
     _accountsSub?.cancel();
+    _categoriesSub?.cancel();
 
     _accountsSub = _userService.getAccountsStream(uid).listen((accountsList) {
       _accounts = accountsList;
@@ -44,9 +48,15 @@ class HomeViewModel extends CommonViewModel {
           selectAccount(uid, _accounts.first);
         } else {
           _selectedAccount = _accounts.firstWhere((a) => a.id == _selectedAccount!.id);
+          isLoading = false;
         }
+      } else {
+        isLoading = false;
       }
-      isLoading = false;
+    });
+
+    _categoriesSub = _userService.getCategoriesStream(uid).listen((cats) {
+      _categories = cats;
       notifyListeners();
     });
   }
@@ -61,7 +71,7 @@ class HomeViewModel extends CommonViewModel {
   }
 
   Future<void> loadTransactions(String uid) async {
-    if (!_hasMore || isLoading || _isLoadingMore || _selectedAccount == null) return;
+    if (!_hasMore || _isLoadingMore || _selectedAccount == null) return;
 
     if (_transactions.isEmpty) {
       isLoading = true;
@@ -133,6 +143,9 @@ class HomeViewModel extends CommonViewModel {
 
   Future<void> deleteTransaction(String uid, String accountId, TransactionModel transaction) async {
     try {
+      _transactions.removeWhere((t) => t.id == transaction.id);
+      notifyListeners();
+      
       final firestore = FirebaseFirestore.instance;
       final accountRef = firestore.collection('users').doc(uid).collection('accounts').doc(accountId);
 
@@ -144,31 +157,10 @@ class HomeViewModel extends CommonViewModel {
         }
         dbTransaction.delete(accountRef.collection('transactions').doc(transaction.id));
       });
-
-      _transactions.removeWhere((t) => t.id == transaction.id);
-      notifyListeners();
     } catch (e) {
       errorMessage = "Erreur de suppression : $e";
-      notifyListeners();
+      await loadTransactions(uid);
     }
-  }
-
-  void clear() {
-    _accountsSub?.cancel();
-    _accountsSub = null;
-    _accounts = [];
-    _transactions = [];
-    _selectedAccount = null;
-    _lastDocument = null;
-    _hasMore = true;
-    _hideChecked = true;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _accountsSub?.cancel();
-    super.dispose();
   }
 
   Future<void> addTransaction({
@@ -177,6 +169,7 @@ class HomeViewModel extends CommonViewModel {
     required String title,
     required double amount,
     required String category,
+    DateTime? date,
   }) async {
     try {
       final transactionRef = FirebaseFirestore.instance
@@ -190,10 +183,15 @@ class HomeViewModel extends CommonViewModel {
         amount: amount,
         category: category,
         accountId: accountId,
-        date: DateTime.now(),
+        date: date ?? DateTime.now(),
       );
 
       await transactionRef.set(newTransaction.toJson());
+
+      if (_selectedAccount?.id == accountId) {
+        _transactions.insert(0, newTransaction);
+        notifyListeners();
+      }
 
       final accountRef = FirebaseFirestore.instance
           .collection('users').doc(uid)
@@ -218,11 +216,13 @@ class HomeViewModel extends CommonViewModel {
     required String targetAccountId,
     required String title,
     required double amount,
+    DateTime? date,
   }) async {
     isLoading = true;
     try {
       final firestore = FirebaseFirestore.instance;
-
+      final dateToSave = date ?? DateTime.now();
+      
       final sourceAccRef = firestore.collection('users').doc(uid).collection('accounts').doc(sourceAccountId);
       final targetAccRef = firestore.collection('users').doc(uid).collection('accounts').doc(targetAccountId);
       
@@ -230,37 +230,43 @@ class HomeViewModel extends CommonViewModel {
         final sourceSnap = await transaction.get(sourceAccRef);
         final targetSnap = await transaction.get(targetAccRef);
 
-        if (!sourceSnap.exists || !targetSnap.exists) {
-          throw Exception("Un des comptes n'existe pas");
-        }
+        if (!sourceSnap.exists || !targetSnap.exists) throw Exception("Comptes introuvables");
 
-        final sourceBalance = (sourceSnap.data()?['currentBalance'] ?? 0.0).toDouble();
-        final targetBalance = (targetSnap.data()?['currentBalance'] ?? 0.0).toDouble();
-        final sourceName = sourceSnap.data()?['name'] ?? "Compte source";
-        final targetName = targetSnap.data()?['name'] ?? "Compte destination";
-
-        transaction.update(sourceAccRef, {'currentBalance': sourceBalance - amount});
-        transaction.update(targetAccRef, {'currentBalance': targetBalance + amount});
+        final sourceName = sourceSnap.data()?['name'] ?? "Source";
+        final targetName = targetSnap.data()?['name'] ?? "Dest.";
 
         final sourceTransRef = sourceAccRef.collection('transactions').doc();
-        transaction.set(sourceTransRef, {
-          'id': sourceTransRef.id,
-          'title': "Transfert vers $targetName ${title != 'Transfert' ? '- $title' : ''}",
-          'amount': -amount,
-          'accountId': sourceAccountId,
-          'date': Timestamp.now(),
-          'category': 'Transfert',
-        });
-
         final targetTransRef = targetAccRef.collection('transactions').doc();
-        transaction.set(targetTransRef, {
-          'id': targetTransRef.id,
-          'title': "Transfert de $sourceName ${title != 'Transfert' ? '- $title' : ''}",
-          'amount': amount,
-          'accountId': targetAccountId,
-          'date': Timestamp.now(),
-          'category': 'Transfert',
-        });
+        
+        final sourceTrans = TransactionModel(
+          id: sourceTransRef.id,
+          title: "Transfert vers $targetName ${title != 'Transfert' ? '- $title' : ''}",
+          amount: -amount,
+          accountId: sourceAccountId,
+          date: dateToSave,
+          category: 'Transfert',
+        );
+
+        final targetTrans = TransactionModel(
+          id: targetTransRef.id,
+          title: "Transfert de $sourceName ${title != 'Transfert' ? '- $title' : ''}",
+          amount: amount,
+          accountId: targetAccountId,
+          date: dateToSave,
+          category: 'Transfert',
+        );
+        
+        transaction.set(sourceTransRef, sourceTrans.toJson());
+        transaction.set(targetTransRef, targetTrans.toJson());
+
+        transaction.update(sourceAccRef, {'currentBalance': (sourceSnap.data()?['currentBalance'] ?? 0.0) - amount});
+        transaction.update(targetAccRef, {'currentBalance': (targetSnap.data()?['currentBalance'] ?? 0.0) + amount});
+
+        if (_selectedAccount?.id == sourceAccountId) {
+          _transactions.insert(0, sourceTrans);
+        } else if (_selectedAccount?.id == targetAccountId) {
+          _transactions.insert(0, targetTrans);
+        }
       });
     } catch (e) {
       errorMessage = "Erreur lors du transfert : $e";
@@ -274,5 +280,27 @@ class HomeViewModel extends CommonViewModel {
       return _transactions.where((t) => !t.isChecked).toList();
     }
     return _transactions;
+  }
+
+  void clear() {
+    _accountsSub?.cancel();
+    _categoriesSub?.cancel();
+    _accountsSub = null;
+    _categoriesSub = null;
+    _accounts = [];
+    _transactions = [];
+    _categories = [];
+    _selectedAccount = null;
+    _lastDocument = null;
+    _hasMore = true;
+    _hideChecked = true;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _accountsSub?.cancel();
+    _categoriesSub?.cancel();
+    super.dispose();
   }
 }
