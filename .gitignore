@@ -50,3 +50,7 @@ firebase_options.dart
 
 # Node
 /node_modules
+
+# Keystore files
+/android/key.properties
+*.jks
