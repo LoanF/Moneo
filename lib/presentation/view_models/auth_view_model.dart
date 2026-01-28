@@ -1,8 +1,5 @@
 import 'dart:io';
 
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-
 import '../../core/di.dart';
 import '../../core/notifiers/auth_notifier.dart';
 import '../../core/services/auth_service.dart';
@@ -16,28 +13,27 @@ import 'common_view_model.dart';
 class AuthViewModel extends CommonViewModel {
   final IAuthService _auth = getIt<IAuthService>();
   final IAppUserService _appUserService = getIt<IAppUserService>();
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  User? get currentUser => _auth.currentUser;
+  AppUser? get currentUser => _auth.currentUser;
 
   Future<bool> login(String email, String password) async {
     isLoading = true;
+    errorMessage = null;
 
     try {
       await _auth.signInWithEmail(email, password);
       isLoading = false;
       return true;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = AuthExceptionCode.getMessageFromCode(e.code);
-      return false;
     } catch (e) {
-      errorMessage = "Une erreur inconnue est survenue.";
+      isLoading = false;
+      errorMessage = e.toString();
       return false;
     }
   }
 
   Future<bool> loginWithGoogle() async {
     isLoading = true;
+    errorMessage = null;
     try {
       await _auth.signInWithGoogle();
       isLoading = false;
@@ -51,16 +47,16 @@ class AuthViewModel extends CommonViewModel {
 
   Future<bool> register(String email, String password) async {
     isLoading = true;
+    errorMessage = null;
 
     try {
-      await _auth.createUserWithEmailAndPassword(email, password);
+      final username = email.split('@')[0];
+      await _auth.register(username, email, password);
       isLoading = false;
       return true;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = AuthExceptionCode.getMessageFromCode(e.code);
-      return false;
     } catch (e) {
-      errorMessage = "Une erreur inconnue est survenue.";
+      isLoading = false;
+      errorMessage = e.toString();
       return false;
     }
   }
@@ -82,38 +78,22 @@ class AuthViewModel extends CommonViewModel {
 
       String? photoUrl;
 
-      if (newImageFile != null) {
-        final ref = _storage
-            .ref()
-            .child(StorageChild.profileImages.value)
-            .child('${user.uid}.jpg');
-        await ref.putFile(newImageFile);
-        photoUrl = await ref.getDownloadURL();
-        await user.updatePhotoURL(photoUrl);
-      }
+      // TODO: Implémenter l'upload de l'image de profil
+      // if (newImageFile != null) {
+      //   // Supposons que votre UserService possède une méthode pour uploader l'image sur votre serveur
+      //   photoUrl = await _appUserService.uploadProfileImage(newImageFile);
+      // }
 
-      if (newName != user.displayName) {
-        await user.updateDisplayName(newName);
-      }
+      final updatedAppUser = user.copyWith(
+        displayName: newName.isNotEmpty ? newName : user.displayName,
+        photoURL: photoUrl ?? user.photoURL,
+      );
 
-      AppUser? updatedAppUser;
+      if (updatedAppUser == null) throw Exception("Profil introuvable");
+      
+      await _appUserService.updateUser(updatedAppUser);
 
-      if (newName.isNotEmpty) {
-        updatedAppUser = _appUserService.currentAppUser!.copyWith(
-          displayName: newName,
-        );
-      }
-      if (photoUrl != null) {
-        updatedAppUser = _appUserService.currentAppUser!.copyWith(
-          photoURL: photoUrl,
-        );
-      }
-
-      if (updatedAppUser != null) {
-        _appUserService.updateUser(updatedAppUser);
-      }
-
-      await user.reload();
+      getIt<AuthNotifier>().refreshProfile(updatedAppUser);
 
       isLoading = false;
       return true;
@@ -155,7 +135,7 @@ class AuthViewModel extends CommonViewModel {
         hasCompletedSetup: true,
         paymentMethods: paymentMethods,
       );
-
+      
       if (updatedAppUser == null) throw Exception("Profil introuvable");
 
       await _appUserService.updateUser(updatedAppUser);

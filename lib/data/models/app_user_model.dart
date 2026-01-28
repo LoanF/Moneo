@@ -5,8 +5,8 @@ class AppUser {
   final String displayName;
   final String email;
   final String? photoURL;
-  final Timestamp createdAt;
-  final Timestamp updatedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
   final String? fcmToken;
   final bool hasCompletedSetup;
   final List<Map<String, dynamic>> paymentMethods;
@@ -29,8 +29,12 @@ class AppUser {
       displayName: json['displayName'],
       email: json['email'],
       photoURL: json['photoURL'],
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : DateTime.now(),
       fcmToken: json['fcmToken'],
       hasCompletedSetup: json['hasCompletedSetup'] ?? false,
       paymentMethods: List<Map<String, dynamic>>.from(json['paymentMethods'] ?? []),
@@ -43,8 +47,8 @@ class AppUser {
       'displayName': displayName,
       'email': email,
       'photoURL': photoURL,
-      'createdAt': createdAt,
-      'updatedAt': Timestamp.now(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'fcmToken': fcmToken,
       'hasCompletedSetup': hasCompletedSetup,
       'paymentMethods': paymentMethods,
@@ -64,7 +68,7 @@ class AppUser {
       email: email,
       photoURL: photoURL ?? this.photoURL,
       createdAt: createdAt,
-      updatedAt: Timestamp.now(),
+      updatedAt: updatedAt,
       fcmToken: fcmToken ?? this.fcmToken,
       hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
       paymentMethods: paymentMethods ?? this.paymentMethods,
