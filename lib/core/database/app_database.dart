@@ -29,7 +29,32 @@ class BankAccounts extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Transactions, BankAccounts])
+class Categories extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get iconCode => integer()();
+  IntColumn get colorValue => integer()();
+  TextColumn get userId => text()();
+  TextColumn get parentId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class MonthlyPayments extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  RealColumn get amount => real()();
+  TextColumn get type => text()();
+  IntColumn get dayOfMonth => integer()();
+  TextColumn get accountId => text()();
+  TextColumn get categoryId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Transactions, BankAccounts, Categories, MonthlyPayments])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 

@@ -16,14 +16,10 @@ class SyncService {
     final token = await _storage.read(key: 'accessToken');
     if (token == null) return;
 
-    // Connexion au flux SSE de ton API Hono
     SSEClient.subscribeToSSE(
       method: SSERequestType.GET,
       url: '${AppAssets.apiUrl}/realtime',
-      header: {
-        "Authorization": "Bearer $token",
-        "Accept": "text/event-stream",
-      },
+      header: {"Authorization": "Bearer $token", "Accept": "text/event-stream"},
     ).listen((event) {
       if (event.data != null && event.data!.isNotEmpty) {
         _handleServerEvent(event);
@@ -38,29 +34,30 @@ class SyncService {
   void _handleServerEvent(SSEModel event) {
     try {
       final Map<String, dynamic> payload = jsonDecode(event.data!);
-      final String type = payload['type']; // ex: 'TRANSACTION_CREATED'
+      final String type = payload['type'];
       final data = payload['data'];
 
       switch (type) {
         case 'TRANSACTION_CREATED':
         case 'TRANSACTION_UPDATED':
-          _db.into(_db.transactions).insertOnConflictUpdate(
-            Transaction.fromJson(data),
-          );
+          _db
+              .into(_db.transactions)
+              .insertOnConflictUpdate(Transaction.fromJson(data));
           break;
         case 'ACCOUNT_UPDATED':
-          _db.into(_db.bankAccounts).insertOnConflictUpdate(
-            BankAccount.fromJson(data),
-          );
+          _db
+              .into(_db.bankAccounts)
+              .insertOnConflictUpdate(BankAccount.fromJson(data));
           break;
         case 'TRANSACTION_DELETED':
-          (_db.delete(_db.transactions)..where((t) => t.id.equals(data['id']))).go();
+          (_db.delete(
+            _db.transactions,
+          )..where((t) => t.id.equals(data['id']))).go();
           break;
       }
     } catch (e) {
-        if (kDebugMode) {
-          print('Erreur de synchro SSE: $e');
-        }
+      if (kDebugMode) {
+        print('Erreur de synchro SSE: $e');
       }
     }
   }
