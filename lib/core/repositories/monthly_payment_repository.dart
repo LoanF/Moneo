@@ -26,4 +26,12 @@ class MonthlyPaymentRepository {
       });
     } catch (_) {}
   }
+
+  Future<void> deleteMonthlyPayment(String id) async {
+    await (_db.delete(_db.monthlyPayments)..where((t) => t.id.equals(id))).go();
+
+    try {
+      await _api.dio.delete('/monthly-payments/$id');
+    } catch (_) {}
+  }
 }

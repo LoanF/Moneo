@@ -8,6 +8,7 @@ import '../../core/repositories/monthly_payment_repository.dart';
 import '../../core/repositories/transaction_repository.dart';
 import '../../core/repositories/bank_account_repository.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/monthly_processor.dart';
 import 'common_view_model.dart';
 
 class HomeViewModel extends CommonViewModel {
@@ -15,6 +16,7 @@ class HomeViewModel extends CommonViewModel {
   final BankAccountRepository _accountRepo;
   final CategoryRepository _categoryRepo;
   final MonthlyPaymentRepository _monthlyRepo;
+  final MonthlyProcessor _monthlyProcessor;
   final _uuid = const Uuid();
 
   List<BankAccount> _accounts = [];
@@ -30,7 +32,7 @@ class HomeViewModel extends CommonViewModel {
   StreamSubscription? _categoriesSub;
   StreamSubscription? _monthlyPaymentsSub;
 
-  HomeViewModel(this._transactionRepo, this._accountRepo, this._categoryRepo, this._monthlyRepo);
+  HomeViewModel(this._transactionRepo, this._accountRepo, this._categoryRepo, this._monthlyRepo, this._monthlyProcessor);
   
   List<BankAccount> get accounts => _accounts;
   List<Transaction> get transactions => _transactions;
@@ -41,9 +43,12 @@ class HomeViewModel extends CommonViewModel {
 
   double get totalBalance => _accounts.fold(0, (sum, acc) => sum + acc.balance);
 
+  final uid = getIt<IAuthService>().currentUser?.uid ?? "";
+  
+
   Future<void> init() async {
     isLoading = true;
-
+    
     _categoriesSub?.cancel();
     _categoriesSub = _categoryRepo.watchCategories().listen((list) {
       _categories = list;
@@ -73,6 +78,8 @@ class HomeViewModel extends CommonViewModel {
       isLoading = false;
       notifyListeners();
     });
+
+    await _monthlyProcessor.checkAndApply();
   }
 
   Future<void> createAccount({required String name, required double balance}) async {
@@ -192,9 +199,7 @@ class HomeViewModel extends CommonViewModel {
     String? parentId,
   }) async {
     final id = _uuid.v4();
-
-    final uid = getIt<IAuthService>().currentUser?.uid ?? "";
-
+    
     await _categoryRepo.upsertCategories([
       Category(
         id: id,

@@ -49,6 +49,7 @@ class MonthlyPayments extends Table {
   IntColumn get dayOfMonth => integer()();
   TextColumn get accountId => text()();
   TextColumn get categoryId => text().nullable()();
+  DateTimeColumn get lastApplied => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
