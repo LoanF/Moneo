@@ -33,6 +33,7 @@ devtools_options.yaml
 .pub/
 /build/
 /coverage/
+*.g.dart
 
 # Symbolication related
 app.*.symbols

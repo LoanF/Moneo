@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:moneo/core/services/sync_service.dart';
 import 'package:moneo/data/constants/assets.dart';
 import '../../data/models/app_user_model.dart';
+import '../di.dart';
 import 'user_service.dart';
 
 abstract class IAuthService {
@@ -46,6 +48,7 @@ class AuthService implements IAuthService {
         'password': password.trim(),
       });
 
+      getIt<SyncService>().startSync();
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       throw e.response?.data['error'] ?? 'Erreur de connexion';
@@ -63,6 +66,7 @@ class AuthService implements IAuthService {
         'idToken': googleAuth.idToken,
       });
 
+      getIt<SyncService>().startSync();
       await _handleAuthResponse(response.data);
     } catch (e) {
       throw 'Échec de la connexion Google';
@@ -78,6 +82,7 @@ class AuthService implements IAuthService {
         'password': password.trim(),
       });
 
+      getIt<SyncService>().startSync();
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       final data = e.response?.data;
@@ -109,6 +114,7 @@ class AuthService implements IAuthService {
 
   @override
   Future<void> signOut() async {
+    getIt<SyncService>().stopSync();
     await _storage.deleteAll();
     await GoogleSignIn.instance.signOut();
     _authStreamController.add(null);
