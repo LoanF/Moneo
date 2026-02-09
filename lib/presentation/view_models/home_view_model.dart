@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/database/app_database.dart';
+import '../../core/repositories/category_repository.dart';
 import '../../core/repositories/transaction_repository.dart';
 import '../../core/repositories/bank_account_repository.dart';
 import 'common_view_model.dart';
@@ -9,21 +10,25 @@ import 'common_view_model.dart';
 class HomeViewModel extends CommonViewModel {
   final TransactionRepository _transactionRepo;
   final BankAccountRepository _accountRepo;
+  final CategoryRepository _categoryRepo;
   final _uuid = const Uuid();
 
   List<BankAccount> _accounts = [];
   List<Transaction> _transactions = [];
+  List<Category> _categories = [];
   BankAccount? _selectedAccount;
 
   bool _hideChecked = true;
 
   StreamSubscription? _accountsSub;
   StreamSubscription? _transactionsSub;
+  StreamSubscription? _categoriesSub;
 
-  HomeViewModel(this._transactionRepo, this._accountRepo);
-
+  HomeViewModel(this._transactionRepo, this._accountRepo, this._categoryRepo);
+  
   List<BankAccount> get accounts => _accounts;
   List<Transaction> get transactions => _transactions;
+  List<Category> get categories => _categories;
   BankAccount? get selectedAccount => _selectedAccount;
   bool get hideChecked => _hideChecked;
 
@@ -32,6 +37,12 @@ class HomeViewModel extends CommonViewModel {
   Future<void> init() async {
     isLoading = true;
 
+    _categoriesSub?.cancel();
+    _categoriesSub = _categoryRepo.watchCategories().listen((list) {
+      _categories = list;
+      notifyListeners();
+    });
+    
     _accountsSub?.cancel();
     _accountsSub = _accountRepo.watchAccounts().listen((accountsList) {
       _accounts = accountsList;
@@ -83,6 +94,20 @@ class HomeViewModel extends CommonViewModel {
     ));
   }
 
+  Future<void> updateTransaction(Transaction transaction) async {
+    await _transactionRepo.updateTransaction(
+        transaction.id,
+        TransactionsCompanion(
+            amount: Value(transaction.amount),
+            type: Value(transaction.type),
+            note: Value(transaction.note),
+            categoryId: Value(transaction.categoryId),
+            date: Value(transaction.date),
+            isChecked: Value(transaction.isChecked)
+        )
+    );
+  }
+  
   Future<void> toggleCheckTransaction(Transaction transaction) async {
     await _transactionRepo.updateTransaction(
         transaction.id,

@@ -1,20 +1,22 @@
 import 'dart:io';
-
+import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
+import '../../core/database/app_database.dart';
 import '../../core/di.dart';
 import '../../core/notifiers/auth_notifier.dart';
+import '../../core/repositories/bank_account_repository.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/user_service.dart';
 import '../../data/enums/auth_exception_code_enum.dart';
 import '../../data/enums/storage_child_enum.dart';
-import '../../data/models/account_model.dart';
-import '../../data/models/app_user_model.dart';
 import 'common_view_model.dart';
 
 class AuthViewModel extends CommonViewModel {
   final IAuthService _auth = getIt<IAuthService>();
   final IAppUserService _appUserService = getIt<IAppUserService>();
+  final BankAccountRepository _accountRepo = getIt<BankAccountRepository>(); // Repository Drift
+  final _uuid = const Uuid();
 
-  AppUser? get currentUser => _auth.currentUser;
 
   Future<bool> login(String email, String password) async {
     isLoading = true;
@@ -112,31 +114,23 @@ class AuthViewModel extends CommonViewModel {
     errorMessage = null;
 
     try {
-      final uid = currentUser?.uid;
-      if (uid == null) throw Exception("Utilisateur non connecté");
-
+      final user = _auth.currentUser;
+      if (user == null) throw Exception("Utilisateur non connecté");
+      
       for (var data in accounts) {
-        final String accountId = "${DateTime.now().millisecondsSinceEpoch}_${data['name']}";
+        final id = _uuid.v4();
 
-        final account = Account(
-          id: accountId,
+        await _accountRepo.createAccount(BankAccountsCompanion.insert(
+          id: id,
           name: data['name'],
-          initialBalance: (data['balance'] as num).toDouble(),
-          currentBalance: (data['balance'] as num).toDouble(),
-        );
-
-        await _appUserService.createAccount(uid, account);
+          balance: Value((data['balance'] as num).toDouble()),
+        ));
       }
 
-      final currentUserProfile = _appUserService.currentAppUser;
-      if (currentUserProfile == null) throw Exception("Profil introuvable");
-
-      final updatedAppUser = currentUserProfile.copyWith(
+      final updatedAppUser = user.copyWith(
         hasCompletedSetup: true,
         paymentMethods: paymentMethods,
       );
-      
-      if (updatedAppUser == null) throw Exception("Profil introuvable");
 
       await _appUserService.updateUser(updatedAppUser);
       getIt<AuthNotifier>().refreshProfile(updatedAppUser);

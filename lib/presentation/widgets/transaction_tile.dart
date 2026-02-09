@@ -1,10 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/database/app_database.dart';
 import '../../core/themes/app_colors.dart';
-import '../../data/models/transaction_model.dart';
 
 class TransactionTile extends StatelessWidget {
-  final TransactionModel transaction;
+  final Transaction transaction;
   final int? categoryIcon;
   final int? categoryColor;
 
@@ -16,7 +16,7 @@ class TransactionTile extends StatelessWidget {
     final Color iconColor = hasValidColor
         ? Color(categoryColor!)
         : (transaction.amount < 0 ? AppColors.mainColor : AppColors.primaryGreen);
-
+    
     final bool hasValidIcon = categoryIcon != null && categoryIcon != 0;
     final int iconToDisplay = hasValidIcon
         ? categoryIcon!

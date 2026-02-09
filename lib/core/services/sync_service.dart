@@ -1,10 +1,14 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_client_sse/constants/sse_request_type_enum.dart';
 import 'package:flutter_client_sse/flutter_client_sse.dart';
 import 'package:moneo/core/database/app_database.dart';
 import 'package:moneo/data/constants/assets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../di.dart';
+import '../interceptor/api_client.dart';
 
 class SyncService {
   final AppDatabase _db;
@@ -54,11 +58,36 @@ class SyncService {
             _db.transactions,
           )..where((t) => t.id.equals(data['id']))).go();
           break;
+        case 'MONTHLY_PAYMENT_CREATED':
+          _db.into(_db.monthlyPayments).insertOnConflictUpdate(MonthlyPayment.fromJson(data));
+          break;
       }
     } catch (e) {
       if (kDebugMode) {
         print('Erreur de synchro SSE: $e');
       }
+    }
+  }
+
+  Future<void> bootstrapData() async {
+    final api = getIt<ApiClient>();
+
+    try {
+      final responses = await Future.wait([
+        api.dio.get('/bank-accounts'),
+        api.dio.get('/categories'),
+        api.dio.get('/monthly-payments'),
+        api.dio.get('/transactions?limit=100'),
+      ]);
+
+      await _db.batch((batch) {
+        batch.insertAll(_db.bankAccounts, (responses[0].data as List).map((e) => BankAccount.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+        batch.insertAll(_db.categories, (responses[1].data as List).map((e) => Category.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+        batch.insertAll(_db.monthlyPayments, (responses[2].data as List).map((e) => MonthlyPayment.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+        batch.insertAll(_db.transactions, (responses[3].data as List).map((e) => Transaction.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+      });
+    } catch (e) {
+      if (kDebugMode) print('Erreur lors du bootstrap: $e');
     }
   }
 }

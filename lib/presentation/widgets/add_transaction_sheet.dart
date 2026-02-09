@@ -1,19 +1,18 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:drift/drift.dart' hide Column;
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/database/app_database.dart';
 import '../../core/di.dart';
 import '../../core/services/user_service.dart';
 import '../../core/themes/app_colors.dart';
-import '../../data/models/account_model.dart';
-import '../../data/models/category_model.dart';
-import '../../data/models/transaction_model.dart';
 import '../view_models/home_view_model.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   final String uid;
-  final List<Account> accounts;
-  final Account selectedAccount;
-  final TransactionModel? transaction;
+  final List<BankAccount> accounts;
+  final BankAccount selectedAccount;
+  final Transaction? transaction;
 
   const AddTransactionSheet({
     super.key,
@@ -34,9 +33,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   bool _isExpense = true;
   bool _isTransfer = false;
-  CategoryModel? _selectedParent;
-  CategoryModel? _selectedSub;
-  Account? _targetAccount;
+  Category? _selectedParent;
+  Category? _selectedSub;
+  BankAccount? _targetAccount;
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
@@ -44,11 +43,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   void initState() {
     super.initState();
     if (widget.transaction != null) {
-      _titleController.text = widget.transaction!.title;
+      _titleController.text = widget.transaction!.note ?? "";
       _amountController.text = widget.transaction!.amount.abs().toStringAsFixed(2);
       _isExpense = widget.transaction!.amount < 0;
       _selectedDate = widget.transaction!.date;
-      _isTransfer = widget.transaction!.category == 'Transfert';
+      _isTransfer = widget.transaction!.categoryId == 'transfert';
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _setInitialCategory();
@@ -57,10 +56,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   void _setInitialCategory() {
-    if (widget.transaction?.category == null || _isTransfer) return;
+    if (widget.transaction?.categoryId == null || _isTransfer) return;
 
     final categories = context.read<HomeViewModel>().categories;
-    final categoryId = widget.transaction!.category!;
+    final categoryId = widget.transaction!.categoryId!;
 
     try {
       if (categoryId.startsWith('other_')) {
@@ -271,7 +270,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   Widget _buildAccountDropdown() {
     final others = widget.accounts.where((a) => a.id != widget.selectedAccount.id).toList();
-    return DropdownButtonFormField<Account>(
+    return DropdownButtonFormField<BankAccount>(
       dropdownColor: AppColors.secondaryBackground,
       initialValue: _targetAccount ?? (others.isNotEmpty ? others.first : null),
       items: others.map((a) => DropdownMenuItem(value: a, child: Text(a.name, style: const TextStyle(color: Colors.white)))).toList(),
@@ -285,22 +284,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   Widget _buildCategorySection() {
-    return StreamBuilder<List<CategoryModel>>(
+    return StreamBuilder<List<Category>>(
       stream: _userService.getCategoriesStream(widget.uid),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox(height: 150, child: Center(child: CircularProgressIndicator()));
 
         final allCats = snapshot.data!;
         final mainCats = allCats.where((c) => c.parentId == null).toList();
-        List<CategoryModel> subCats = _selectedParent == null ? [] : allCats.where((c) => c.parentId == _selectedParent!.id).toList();
+        List<Category> subCats = _selectedParent == null ? [] : allCats.where((c) => c.parentId == _selectedParent!.id).toList();
 
         if (_selectedParent != null && subCats.isNotEmpty) {
-          subCats.add(CategoryModel(
+          subCats.add(Category(
             id: "other_${_selectedParent!.id}",
             name: "Autre",
             parentId: _selectedParent!.id,
             iconCode: _selectedParent!.iconCode,
             colorValue: _selectedParent!.colorValue,
+            userId: widget.uid,
           ));
         }
         
@@ -322,7 +322,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     );
   }
 
-  Widget _buildHorizontalCategoryList(List<CategoryModel> categories, bool isParentList) {
+  Widget _buildHorizontalCategoryList(List<Category> categories, bool isParentList) {
     return SizedBox(
       height: 90,
       child: ListView.builder(
@@ -405,53 +405,37 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       if (_isTransfer) {
         if (_targetAccount != null) {
           await homeViewModel.addTransfer(
-            uid: widget.uid,
-            sourceAccountId: widget.selectedAccount.id,
-            targetAccountId: _targetAccount!.id,
+            sourceAccount: widget.selectedAccount,
+            targetAccount: _targetAccount!,
             title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
             amount: amount,
-            date: _selectedDate,
           );
         }
       } else {
         final finalAmount = _isExpense ? -amount : amount;
-        
-        String finalCategoryId = "autre";
-        String finalCategoryName = "Autre";
-  
+        String? finalCategoryId;
         if (_selectedParent != null) {
-          final hasSubCats = homeViewModel.categories.any((c) => c.parentId == _selectedParent!.id);
-  
-          if (hasSubCats) {
-            finalCategoryId = _selectedSub?.id ?? "other_${_selectedParent!.id}";
-            finalCategoryName = _selectedSub?.name ?? "Autre";
-          } else {
-            finalCategoryId = _selectedParent!.id;
-            finalCategoryName = _selectedParent!.name;
-          }
+          finalCategoryId = _selectedSub?.id ?? _selectedParent!.id;
         }
 
         if (widget.transaction != null) {
-          await homeViewModel.updateTransaction(
-            uid: widget.uid,
-            oldTransaction: widget.transaction!,
-            title: _titleController.text,
+          await homeViewModel.updateTransaction(widget.transaction!.copyWith(
             amount: finalAmount,
-            category: finalCategoryId,
+            note: Value(_titleController.text),
+            categoryId: Value(finalCategoryId),
             date: _selectedDate,
-          );
+          ));
         } else {
           await homeViewModel.addTransaction(
-            uid: widget.uid,
-            accountId: widget.selectedAccount.id,
-            title: _titleController.text.isEmpty ? finalCategoryName : _titleController.text,
+            title: _titleController.text,
             amount: finalAmount,
-            category: finalCategoryId,
+            type: _isExpense ? 'expense' : 'income',
+            categoryId: finalCategoryId,
             date: _selectedDate,
           );
         }
       }
-  
+      
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {

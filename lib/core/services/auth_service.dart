@@ -48,7 +48,6 @@ class AuthService implements IAuthService {
         'password': password.trim(),
       });
 
-      getIt<SyncService>().startSync();
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       throw e.response?.data['error'] ?? 'Erreur de connexion';
@@ -66,7 +65,6 @@ class AuthService implements IAuthService {
         'idToken': googleAuth.idToken,
       });
 
-      getIt<SyncService>().startSync();
       await _handleAuthResponse(response.data);
     } catch (e) {
       throw 'Échec de la connexion Google';
@@ -82,7 +80,6 @@ class AuthService implements IAuthService {
         'password': password.trim(),
       });
 
-      getIt<SyncService>().startSync();
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       final data = e.response?.data;
@@ -106,6 +103,10 @@ class AuthService implements IAuthService {
     await _storage.write(key: 'accessToken', value: accessToken);
     await _storage.write(key: 'refreshToken', value: refreshToken);
 
+    final syncService = getIt<SyncService>();
+    await syncService.bootstrapData();
+    syncService.startSync();
+    
     final user = AppUser.fromJson(data['user'] ?? {});
     await _appUserService.createUser(user);
 
