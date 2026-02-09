@@ -1,15 +1,14 @@
 ﻿import 'package:flutter/material.dart';
+import '../../core/database/app_database.dart';
 import '../../core/themes/app_colors.dart';
-import '../../data/models/category_model.dart';
 
 class CategoryFormSheet extends StatefulWidget {
-  final String uid;
-  final CategoryModel? category;
-  final CategoryModel? parent;
-  final Function(CategoryModel) onSave;
+  final Category? category;
+  final String? parentId;
+  final Function(String name, int iconCode, int colorValue) onSave;
 
-  const CategoryFormSheet({super.key, required this.uid, this.category, this.parent, required this.onSave});
-
+  const CategoryFormSheet({super.key, this.category, this.parentId, required this.onSave});
+  
   @override
   State<CategoryFormSheet> createState() => _CategoryFormSheetState();
 }
@@ -45,7 +44,7 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isSub = widget.parent != null || (widget.category?.parentId != null);
+    final isSub = widget.parentId != null || (widget.category?.parentId != null);
 
     return SafeArea(
       child: Padding(
@@ -165,13 +164,11 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
                   ),
                   onPressed: () {
                     if (_nameController.text.isEmpty) return;
-                    widget.onSave(CategoryModel(
-                      id: widget.category?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-                      name: _nameController.text,
-                      parentId: widget.parent?.id ?? widget.category?.parentId,
-                      iconCode: isSub ? (widget.parent?.iconCode ?? 0) : _selectedIcon,
-                      colorValue: isSub ? (widget.parent?.colorValue ?? 0) : _selectedColor.toARGB32(),
-                    ));
+                    widget.onSave(
+                      _nameController.text,
+                      _selectedIcon,
+                      _selectedColor.toARGB32(),
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text("Enregistrer", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

@@ -1,25 +1,20 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/database/app_database.dart';
 import '../../core/notifiers/auth_notifier.dart';
-import '../../core/services/user_service.dart';
-import '../../core/di.dart';
-import '../../data/models/monthly_operation_model.dart';
 import '../../core/themes/app_colors.dart';
+import '../view_models/home_view_model.dart';
 import '../widgets/monthly_operation_form_sheet.dart';
 
-class MonthlyOperationsPage extends StatefulWidget {
+class MonthlyOperationsPage extends StatelessWidget {
   const MonthlyOperationsPage({super.key});
 
   @override
-  State<MonthlyOperationsPage> createState() => _MonthlyOperationsPageState();
-}
-
-class _MonthlyOperationsPageState extends State<MonthlyOperationsPage> {
-  final _userService = getIt<IAppUserService>();
-
-  @override
   Widget build(BuildContext context) {
-    final uid = context.read<AuthNotifier>().appUser!.uid;
+    final vm = context.watch<HomeViewModel>();
+    final auth = context.read<AuthNotifier>();
+    final uid = auth.appUser?.uid ?? "";
+    final operations = vm.monthlyPayments;
 
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
@@ -28,127 +23,120 @@ class _MonthlyOperationsPageState extends State<MonthlyOperationsPage> {
         backgroundColor: AppColors.mainBackground,
         scrolledUnderElevation: 0,
       ),
+      body: operations.isEmpty
+          ? _buildEmptyState()
+          : ListView.builder(
+        padding: const EdgeInsets.only(bottom: 100, top: 16),
+        itemCount: operations.length,
+        itemBuilder: (context, index) => _buildOperationCard(context, operations[index], vm, uid),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.mainColor,
-        onPressed: () => _openForm(context, uid),
+        onPressed: () => _showForm(context, uid),
         label: const Text("Ajouter", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         icon: const Icon(Icons.add, color: Colors.white),
       ),
-      body: StreamBuilder<List<MonthlyOperationModel>>(
-        stream: _userService.getMonthlyOperationsStream(uid),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-          final operations = snapshot.data!;
-          if (operations.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.calendar_month_outlined, size: 80, color: AppColors.grey2.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  const Text("Aucune opération mensuelle", style: TextStyle(color: AppColors.secondaryText, fontSize: 16)),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: operations.length,
-            itemBuilder: (context, index) {
-              final op = operations[index];
-              return _buildOperationTile(context, uid, op);
-            },
-          );
-        },
-      ),
     );
   }
 
-  Widget _buildOperationTile(BuildContext context, String uid, MonthlyOperationModel op) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+  Widget _buildOperationCard(BuildContext context, MonthlyPayment op, HomeViewModel vm, String uid) {
+    final account = vm.accounts.firstWhere(
+            (a) => a.id == op.accountId,
+        orElse: () => vm.accounts.first
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Card(
         color: AppColors.secondaryBackground,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: (op.isExpense ? AppColors.error : AppColors.mainColor).withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(16),
+          title: Text(op.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text("Le ${op.dayOfMonth} du mois • ${account.name}", style: const TextStyle(color: AppColors.grey1)),
           ),
-          child: Text(
-            op.dayOfMonth.toString(),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: op.isExpense ? AppColors.error : AppColors.mainColor,
-            ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                "${op.amount > 0 ? '+' : ''}${op.amount.toStringAsFixed(2)} €",
+                style: TextStyle(
+                  color: op.amount < 0 ? AppColors.primaryRed : AppColors.primaryGreen,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+              const Text("Récurrent", style: TextStyle(fontSize: 10, color: AppColors.grey1)),
+            ],
           ),
-        ),
-        title: Text(op.title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.mainText)),
-        subtitle: Text(
-          "Moyenne : ${(op.amounts.reduce((a, b) => a + b) / 12).toStringAsFixed(2)} € / mois",
-          style: const TextStyle(color: AppColors.grey2, fontSize: 13),
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.more_vert_rounded, color: AppColors.grey2),
-          onPressed: () => _showOptions(context, uid, op),
+          onTap: () => _showForm(context, uid, operation: op),
+          onLongPress: () => _confirmDelete(context, op, vm),
         ),
       ),
     );
   }
 
-  void _showOptions(BuildContext context, String uid, MonthlyOperationModel op) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.secondaryBackground,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.edit_rounded, color: AppColors.mainText),
-              title: const Text("Modifier", style: TextStyle(color: AppColors.mainText)),
-              onTap: () {
-                Navigator.pop(context);
-                _openForm(context, uid, operation: op);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
-              title: const Text("Supprimer", style: TextStyle(color: AppColors.error)),
-              onTap: () {
-                _userService.deleteMonthlyOperation(uid, op.id);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openForm(BuildContext context, String uid, {MonthlyOperationModel? operation}) async {
-    final accounts = await _userService.getAccountsStream(uid).first;
-    final categories = await _userService.getCategoriesStream(uid).first;
-
-    if (!context.mounted) return;
+  void _showForm(BuildContext context, String uid, {MonthlyPayment? operation}) {
+    final vm = context.read<HomeViewModel>();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => MonthlyOperationFormSheet(
-        uid: uid,
-        accounts: accounts,
         operation: operation,
-        onSave: (op) => _userService.saveMonthlyOperation(uid, op),
+        accounts: vm.accounts,
+        categories: vm.categories,
+        onSave: (name, amount, type, day, accId, catId) {
+          vm.saveMonthlyPayment(
+            id: operation?.id,
+            name: name,
+            amount: amount,
+            type: type,
+            dayOfMonth: day,
+            accountId: accId,
+            categoryId: catId,
+          );
+        },
+        uid: uid,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.calendar_month_outlined, size: 64, color: AppColors.grey1.withValues(alpha: 0.5)),
+          const SizedBox(height: 16),
+          const Text("Aucune mensualisation configurée", style: TextStyle(color: AppColors.grey1)),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, MonthlyPayment op, HomeViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.secondaryBackground,
+        title: const Text("Supprimer ?", style: TextStyle(color: Colors.white)),
+        content: Text("Voulez-vous supprimer la mensualité '${op.name}' ?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Annuler")),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryRed),
+            onPressed: () {
+              vm.deleteMonthlyPayment(op.id);
+              Navigator.pop(context);
+            },
+            child: const Text("Supprimer"),
+          ),
+        ],
       ),
     );
   }
