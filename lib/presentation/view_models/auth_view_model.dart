@@ -9,21 +9,24 @@ import '../../core/services/auth_service.dart';
 import '../../core/services/user_service.dart';
 import '../../data/enums/auth_exception_code_enum.dart';
 import '../../data/enums/storage_child_enum.dart';
+import '../../data/models/app_user_model.dart';
 import 'common_view_model.dart';
 
 class AuthViewModel extends CommonViewModel {
-  final IAuthService _auth = getIt<IAuthService>();
+  final IAuthService _authService;
   final IAppUserService _appUserService = getIt<IAppUserService>();
   final BankAccountRepository _accountRepo = getIt<BankAccountRepository>(); // Repository Drift
   final _uuid = const Uuid();
 
-
+  AuthViewModel(this._authService);
+  AppUser? get currentUser => _authService.currentUser;
+  
   Future<bool> login(String email, String password) async {
     isLoading = true;
     errorMessage = null;
 
     try {
-      await _auth.signInWithEmail(email, password);
+      await _authService.signInWithEmail(email, password);
       isLoading = false;
       return true;
     } catch (e) {
@@ -37,7 +40,7 @@ class AuthViewModel extends CommonViewModel {
     isLoading = true;
     errorMessage = null;
     try {
-      await _auth.signInWithGoogle();
+      await _authService.signInWithGoogle();
       isLoading = false;
       return true;
     } catch (e) {
@@ -53,7 +56,7 @@ class AuthViewModel extends CommonViewModel {
 
     try {
       final username = email.split('@')[0];
-      await _auth.register(username, email, password);
+      await _authService.register(username, email, password);
       isLoading = false;
       return true;
     } catch (e) {
@@ -64,7 +67,7 @@ class AuthViewModel extends CommonViewModel {
   }
 
   Future<void> logout() async {
-    await _auth.signOut();
+    await _authService.signOut();
   }
 
   Future<bool> updateProfile({
@@ -75,7 +78,7 @@ class AuthViewModel extends CommonViewModel {
     errorMessage = null;
 
     try {
-      final user = _auth.currentUser;
+      final user = _authService.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
 
       String? photoUrl;
@@ -91,8 +94,6 @@ class AuthViewModel extends CommonViewModel {
         photoURL: photoUrl ?? user.photoURL,
       );
 
-      if (updatedAppUser == null) throw Exception("Profil introuvable");
-      
       await _appUserService.updateUser(updatedAppUser);
 
       getIt<AuthNotifier>().refreshProfile(updatedAppUser);
@@ -114,7 +115,7 @@ class AuthViewModel extends CommonViewModel {
     errorMessage = null;
 
     try {
-      final user = _auth.currentUser;
+      final user = _authService.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
       
       for (var data in accounts) {

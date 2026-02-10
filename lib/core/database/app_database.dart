@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,6 +17,7 @@ class Transactions extends Table {
   BoolColumn get isChecked => boolean().withDefault(const Constant(false))();
   TextColumn get accountId => text()();
   TextColumn get categoryId => text().nullable()();
+  BoolColumn get isMonthly => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -55,7 +58,38 @@ class MonthlyPayments extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Transactions, BankAccounts, Categories, MonthlyPayments])
+class PaymentMethodsConverter extends TypeConverter<List<Map<String, dynamic>>, String> {
+  const PaymentMethodsConverter();
+
+  @override
+  List<Map<String, dynamic>> fromSql(String fromDb) {
+    final List<dynamic> decoded = jsonDecode(fromDb) as List<dynamic>;
+    return decoded.map((e) => e as Map<String, dynamic>).toList();
+  }
+
+  @override
+  String toSql(List<Map<String, dynamic>> value) {
+    return jsonEncode(value);
+  }
+}
+
+class Users extends Table {
+  TextColumn get id => text()(); // Ton UID
+  TextColumn get displayName => text()();
+  TextColumn get email => text()();
+  TextColumn get photoUrl => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get fcmToken => text().nullable()();
+  BoolColumn get hasCompletedSetup => boolean().withDefault(const Constant(false))();
+
+  TextColumn get paymentMethods => text().map(const PaymentMethodsConverter()).nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Transactions, BankAccounts, Categories, MonthlyPayments, Users])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 

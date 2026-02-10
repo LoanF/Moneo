@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/database/app_database.dart';
 import '../../core/di.dart';
+import '../../core/repositories/category_repository.dart';
 import '../../core/services/user_service.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/home_view_model.dart';
@@ -285,7 +286,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   Widget _buildCategorySection() {
     return StreamBuilder<List<Category>>(
-      stream: _userService.getCategoriesStream(widget.uid),
+      stream: getIt<CategoryRepository>().watchCategories(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox(height: 150, child: Center(child: CircularProgressIndicator()));
 

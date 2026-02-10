@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/database/app_database.dart';
 import '../../core/extensions/string_extensions.dart';
 import '../../core/notifiers/auth_notifier.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
-import '../../core/services/user_service.dart';
-import '../../core/di.dart';
-import '../../data/models/account_model.dart';
-import '../../data/models/category_model.dart';
-import '../../data/models/transaction_model.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/add_transaction_sheet.dart';
 import '../widgets/transaction_tile.dart';
@@ -22,30 +18,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _userService = getIt<IAppUserService>();
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authNotifier = context.read<AuthNotifier>();
-      final homeViewModel = context.read<HomeViewModel>();
-      if (authNotifier.appUser != null) {
-        homeViewModel.init(authNotifier.appUser!.uid);
-      }
+      context.read<HomeViewModel>().init();
     });
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
-      final authNotifier = context.read<AuthNotifier>();
-      final homeViewModel = context.read<HomeViewModel>();
-      if (authNotifier.appUser != null) {
-        homeViewModel.loadTransactions(authNotifier.appUser!.uid);
-      }
-    }
   }
 
   @override
@@ -57,58 +37,45 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final homeViewModel = context.watch<HomeViewModel>();
-    final authNotifier = context.watch<AuthNotifier>();
-    final uid = authNotifier.appUser?.uid ?? "";
+    final categories = homeViewModel.categories;
 
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
-      body: StreamBuilder<List<CategoryModel>>(
-          stream: _userService.getCategoriesStream(uid),
-          builder: (context, catSnapshot) {
-            final categories = catSnapshot.data ?? [];
-
-            return CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildGlobalBalanceHeader(context, homeViewModel.totalBalance),
-
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                _buildAccountSelector(uid, homeViewModel),
-
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "Transactions",
-                          style: TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        IconButton(
-                          onPressed: () => homeViewModel.toggleHideChecked(uid),
-                          icon: Icon(
-                            homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                            color: homeViewModel.hideChecked ? AppColors.grey1 : AppColors.mainColor,
-                            size: 20,
-                          ),
-                        ),
-                      ],
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          _buildGlobalBalanceHeader(context, homeViewModel.totalBalance),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          _buildAccountSelector(homeViewModel),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Transactions",
+                    style: TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    onPressed: () => homeViewModel.toggleHideChecked(),
+                    icon: Icon(
+                      homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                      color: homeViewModel.hideChecked ? AppColors.grey1 : AppColors.mainColor,
+                      size: 20,
                     ),
                   ),
-                ),
-
-                SliverSafeArea(
-                  top: false,
-                  sliver: _buildTransactionList(homeViewModel, uid, categories),
-                ),
-
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
-            );
-          }
+                ],
+              ),
+            ),
+          ),
+          SliverSafeArea(
+            top: false,
+            sliver: _buildTransactionList(homeViewModel, categories),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddTransactionModal(context),
@@ -160,7 +127,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAccountSelector(String uid, HomeViewModel vm) {
+  Widget _buildAccountSelector(HomeViewModel vm) {
     return SliverToBoxAdapter(
       child: SizedBox(
         height: 110,
@@ -172,7 +139,7 @@ class _HomePageState extends State<HomePage> {
             final account = vm.accounts[index];
             final isSelected = vm.selectedAccount?.id == account.id;
             return GestureDetector(
-              onTap: () => vm.selectAccount(uid, account),
+              onTap: () => vm.selectAccount(account),
               child: _buildAccountCard(account, isSelected),
             );
           },
@@ -181,7 +148,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildAccountCard(Account account, bool isSelected) {
+  Widget _buildAccountCard(BankAccount account, bool isSelected) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: 170,
@@ -201,7 +168,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 4),
           Text(
-            "${account.currentBalance.toStringAsFixed(2)} €",
+            "${account.balance.toStringAsFixed(2)} €",
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
           ),
         ],
@@ -209,8 +176,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildTransactionList(HomeViewModel vm, String uid, List<CategoryModel> categories) {
-    final transactions = vm.transactions;
+  Widget _buildTransactionList(HomeViewModel vm, List<Category> categories) {
+    final transactions = vm.filteredTransactions;
 
     if (vm.isLoading && transactions.isEmpty) {
       return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
@@ -230,32 +197,14 @@ class _HomePageState extends State<HomePage> {
           final trans = transactions[index];
 
           final categoryData = categories.firstWhere(
-                (c) => c.id == trans.category,
-            orElse: () {
-              if (trans.category != null && trans.category!.startsWith('other_')) {
-                final parentId = trans.category!.replaceFirst('other_', '');
-                try {
-                  return categories.firstWhere((c) => c.id == parentId);
-                } catch (_) {}
-              }
-
-              return categories.firstWhere(
-                    (c) => c.name.trim().toLowerCase() == trans.category?.trim().toLowerCase(),
-                orElse: () => trans.category == 'Transfert'
-                    ? CategoryModel(
-                  id: 'transfer',
-                  name: 'Transfert',
-                  iconCode: Icons.swap_horiz_rounded.codePoint,
-                  colorValue: Colors.blue.toARGB32(),
-                )
-                    : CategoryModel(
-                  id: 'autre',
-                  name: 'Autre',
-                  iconCode: Icons.help_outline_rounded.codePoint,
-                  colorValue: AppColors.grey1.toARGB32(),
-                ),
-              );
-            },
+                (c) => c.id == trans.categoryId,
+            orElse: () => Category(
+              id: 'autre',
+              name: 'Autre',
+              iconCode: Icons.help_outline_rounded.codePoint,
+              colorValue: AppColors.grey1.toARGB32(),
+              userId: '',
+            ),
           );
 
           return Padding(
@@ -266,12 +215,12 @@ class _HomePageState extends State<HomePage> {
               secondaryBackground: _buildSwipeAction(AppColors.primaryRed, Icons.delete, Alignment.centerRight),
               confirmDismiss: (direction) async {
                 if (direction == DismissDirection.startToEnd) {
-                  await vm.toggleCheckTransaction(uid, vm.selectedAccount!.id, trans);
+                  await vm.toggleCheckTransaction(trans);
                   return false;
                 }
                 return await _showDeleteConfirmation(context);
               },
-              onDismissed: (_) => vm.deleteTransaction(uid, vm.selectedAccount!.id, trans),
+              onDismissed: (_) => vm.deleteTransaction(trans),
               child: InkWell(
                 onTap: () => _showAddTransactionModal(context, transaction: trans),
                 borderRadius: BorderRadius.circular(20),
@@ -305,7 +254,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: AppColors.secondaryBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text("Supprimer ?", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text("Cette action est irréversible et mettra à jour votre solde."),
+        content: const Text("Cette action est irréversible."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Annuler")),
           FilledButton(
@@ -318,7 +267,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showAddTransactionModal(BuildContext context, {TransactionModel? transaction}) {
+  void _showAddTransactionModal(BuildContext context, {Transaction? transaction}) {
     final homeViewModel = context.read<HomeViewModel>();
     final authNotifier = context.read<AuthNotifier>();
 

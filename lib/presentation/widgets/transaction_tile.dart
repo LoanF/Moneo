@@ -48,7 +48,7 @@ class TransactionTile extends StatelessWidget {
           children: [
             Flexible(
               child: Text(
-                transaction.title,
+                transaction.note ?? "",
                 style: TextStyle(
                   color: AppColors.mainText.withValues(alpha: transaction.isChecked ? 0.5 : 1.0),
                   fontWeight: FontWeight.bold,

@@ -212,6 +212,28 @@ class HomeViewModel extends CommonViewModel {
     ]);
   }
 
+  Future<void> saveCategory({
+    String? id,
+    required String name,
+    required int iconCode,
+    required int colorValue,
+    String? parentId,
+  }) async {
+    final finalId = id ?? _uuid.v4();
+    final currentUid = getIt<IAuthService>().currentUser?.uid ?? "";
+
+    await _categoryRepo.upsertCategories([
+      Category(
+        id: finalId,
+        name: name,
+        iconCode: iconCode,
+        colorValue: colorValue,
+        userId: currentUid,
+        parentId: parentId,
+      )
+    ]);
+  }
+
   Future<void> deleteCategory(Category category) async {
     await (_categoryRepo.deleteCategory(category.id));
   }
@@ -252,6 +274,14 @@ class HomeViewModel extends CommonViewModel {
       return _transactions.where((t) => !t.isChecked).toList();
     }
     return _transactions;
+  }
+
+  void clear() {
+    _accounts = [];
+    _transactions = [];
+    _categories = [];
+    _selectedAccount = null;
+    notifyListeners();
   }
 
   @override
