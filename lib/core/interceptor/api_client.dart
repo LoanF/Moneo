@@ -11,6 +11,9 @@ class ApiClient {
       onRequest: (options, handler) async {
         String? token = await storage.read(key: 'accessToken');
         options.headers['Authorization'] = 'Bearer $token';
+
+        options.headers['ngrok-skip-browser-warning'] = 'true'; // TODO: Supprimer plus tard
+        
         return handler.next(options);
       },
       onError: (DioException e, handler) async {

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../database/app_database.dart';
 import '../../data/models/app_user_model.dart';
+import '../interceptor/api_client.dart';
 
 abstract class IAppUserService {
   Future<void> createUser(AppUser user);
@@ -12,10 +13,11 @@ abstract class IAppUserService {
 
 class AppUserService implements IAppUserService {
   final AppDatabase _db;
+  final ApiClient _apiClient;
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
-  AppUserService(this._db);
-
+  AppUserService(this._db, this._apiClient);
+  
   AppUser? _currentAppUser;
 
   @override
@@ -38,14 +40,20 @@ class AppUserService implements IAppUserService {
 
   @override
   Future<void> updateUser(AppUser user) async {
-    await (_db.update(_db.users)..where((t) => t.id.equals(user.uid))).write(
+    final response = await _apiClient.dio.patch('/auth/profile', data: user.toJson());
+
+    print(response.data);
+    
+    final serverData = response.data['user'] ?? response.data;
+    final updatedUser = AppUser.fromJson(serverData);
+    
+    await (_db.update(_db.users)..where((t) => t.id.equals(updatedUser.uid))).write(
       UsersCompanion(
-        displayName: Value(user.displayName),
-        photoUrl: Value(user.photoURL),
-        fcmToken: Value(user.fcmToken),
-        hasCompletedSetup: Value(user.hasCompletedSetup),
-        paymentMethods: Value(user.paymentMethods),
-        updatedAt: Value(DateTime.now()),
+        displayName: Value(updatedUser.displayName),
+        photoUrl: Value(updatedUser.photoURL),
+        fcmToken: Value(updatedUser.fcmToken),
+        hasCompletedSetup: Value(updatedUser.hasCompletedSetup),
+        paymentMethods: Value(updatedUser.paymentMethods),
       ),
     );
     _currentAppUser = user;

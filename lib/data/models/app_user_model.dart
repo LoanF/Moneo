@@ -23,29 +23,29 @@ class AppUser {
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
-      uid: json['uid'] ?? json['id'],
-      displayName: json['displayName'] ?? '',
+      uid: json['uid'] ?? json['id'] ?? '',
+      displayName: json['display_name'] ?? json['displayName'] ?? '',
       email: json['email'] ?? '',
-      photoURL: json['photoURL'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
-      fcmToken: json['fcmToken'],
-      hasCompletedSetup: json['hasCompletedSetup'] ?? false,
-      paymentMethods: List<Map<String, dynamic>>.from(json['paymentMethods'] ?? []),
+      photoURL: json['photo_url'] ?? json['photoURL'],
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) :
+      json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) :
+      json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
+      fcmToken: json['fcm_token'] ?? json['fcmToken'],
+      hasCompletedSetup: json['has_completed_setup'] ?? json['hasCompletedSetup'] ?? false,
+      paymentMethods: List<Map<String, dynamic>>.from(json['payment_methods'] ?? json['paymentMethods'] ?? []),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,
-      'displayName': displayName,
+      'display_name': displayName,
       'email': email,
-      'photoURL': photoURL,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'fcmToken': fcmToken,
-      'hasCompletedSetup': hasCompletedSetup,
-      'paymentMethods': paymentMethods,
+      'photo_url': photoURL,
+      'fcm_token': fcmToken,
+      'has_completed_setup': hasCompletedSetup,
+      'payment_methods': paymentMethods,
     };
   }
 

@@ -19,7 +19,7 @@ void configureDependencies() {
   getIt.registerSingleton<AppDatabase>(AppDatabase());
   getIt.registerSingleton<ApiClient>(ApiClient());
 
-  getIt.registerLazySingleton<IAppUserService>(() => AppUserService(getIt<AppDatabase>()));
+  getIt.registerLazySingleton<IAppUserService>(() => AppUserService(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => TransactionRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => BankAccountRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => CategoryRepository(getIt<AppDatabase>(), getIt<ApiClient>()));

@@ -37,6 +37,10 @@ class SyncService {
 
   void _handleServerEvent(SSEModel event) {
     try {
+      if (event.data == null || event.data!.trim() == "heartbeat") {
+        return;
+      }
+      
       final Map<String, dynamic> payload = jsonDecode(event.data!);
       final String type = payload['type'];
       final data = payload['data'];
