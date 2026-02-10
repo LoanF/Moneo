@@ -35,9 +35,13 @@ class BankAccounts extends Table {
 class Categories extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
+  @JsonKey('iconCode')
   IntColumn get iconCode => integer()();
+  @JsonKey('colorValue')
   IntColumn get colorValue => integer()();
+  @JsonKey('userId')
   TextColumn get userId => text()();
+  @JsonKey('parentId')
   TextColumn get parentId => text().nullable()();
 
   @override
@@ -74,7 +78,7 @@ class PaymentMethodsConverter extends TypeConverter<List<Map<String, dynamic>>, 
 }
 
 class Users extends Table {
-  TextColumn get id => text()(); // Ton UID
+  TextColumn get id => text()();
   TextColumn get displayName => text()();
   TextColumn get email => text()();
   TextColumn get photoUrl => text().nullable()();

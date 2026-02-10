@@ -31,5 +31,10 @@ class ApiClient {
         return handler.next(e);
       },
     ));
+
+    dio.interceptors.add(LogInterceptor(
+      requestBody: true,
+      responseBody: true,
+    ));
   }
 }

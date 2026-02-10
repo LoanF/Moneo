@@ -222,16 +222,16 @@ class HomeViewModel extends CommonViewModel {
     final finalId = id ?? _uuid.v4();
     final currentUid = getIt<IAuthService>().currentUser?.uid ?? "";
 
-    await _categoryRepo.upsertCategories([
-      Category(
-        id: finalId,
-        name: name,
-        iconCode: iconCode,
-        colorValue: colorValue,
-        userId: currentUid,
-        parentId: parentId,
-      )
-    ]);
+    final companion = CategoriesCompanion(
+      id: Value(finalId),
+      name: Value(name),
+      iconCode: Value(iconCode),
+      colorValue: Value(colorValue),
+      userId: Value(currentUid),
+      parentId: Value(parentId),
+    );
+
+    await _categoryRepo.createCategory(companion);
   }
 
   Future<void> deleteCategory(Category category) async {

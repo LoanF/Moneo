@@ -78,7 +78,7 @@ class SyncService {
 
     try {
       final responses = await Future.wait([
-        api.dio.get('/bank-accounts'),
+        api.dio.get('/accounts'),
         api.dio.get('/categories'),
         api.dio.get('/monthly-payments'),
         api.dio.get('/transactions?limit=100'),
@@ -86,8 +86,16 @@ class SyncService {
 
       await _db.batch((batch) {
         batch.insertAll(_db.bankAccounts, (responses[0].data as List).map((e) => BankAccount.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
-        batch.insertAll(_db.categories, (responses[1].data as List).map((e) => Category.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
-        batch.insertAll(_db.monthlyPayments, (responses[2].data as List).map((e) => MonthlyPayment.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+        batch.insertAll(_db.categories, (responses[1].data as List).map((e) {
+          final data = Map<String, dynamic>.from(e);
+          if (data['colorValue'] is String) {
+            data['colorValue'] = int.parse(data['colorValue']);
+          }
+          if (data['iconCode'] is String) {
+            data['iconCode'] = int.parse(data['iconCode']);
+          }
+          return Category.fromJson(data);
+        }).toList(), mode: InsertMode.insertOrReplace);        batch.insertAll(_db.monthlyPayments, (responses[2].data as List).map((e) => MonthlyPayment.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
         batch.insertAll(_db.transactions, (responses[3].data as List).map((e) => Transaction.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
       });
     } catch (e) {

@@ -39,8 +39,8 @@ class AppUser {
 
   Map<String, dynamic> toJson() {
     return {
-      'uid': uid,
-      'display_name': displayName,
+      'id': uid,
+      'username': displayName,
       'email': email,
       'photo_url': photoURL,
       'fcm_token': fcmToken,

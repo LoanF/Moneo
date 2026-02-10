@@ -41,8 +41,6 @@ class AppUserService implements IAppUserService {
   @override
   Future<void> updateUser(AppUser user) async {
     final response = await _apiClient.dio.patch('/auth/profile', data: user.toJson());
-
-    print(response.data);
     
     final serverData = response.data['user'] ?? response.data;
     final updatedUser = AppUser.fromJson(serverData);
