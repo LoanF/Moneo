@@ -8,6 +8,7 @@ abstract class IAppUserService {
   Future<void> createUser(AppUser user);
   Future<void> updateUser(AppUser user);
   Future<AppUser> updateFcmToken(AppUser appUser);
+  Future<AppUser?> loadCurrentUser();
   AppUser? get currentAppUser;
 }
 
@@ -22,7 +23,7 @@ class AppUserService implements IAppUserService {
 
   @override
   Future<void> createUser(AppUser user) async {
-    await _db.into(_db.users).insertOnConflictUpdate(
+    await _db.into(_db.users).insert(
       UsersCompanion.insert(
         id: user.uid,
         displayName: user.displayName,
@@ -34,27 +35,50 @@ class AppUserService implements IAppUserService {
         hasCompletedSetup: Value(user.hasCompletedSetup),
         paymentMethods: Value(user.paymentMethods),
       ),
+      onConflict: DoUpdate((_) => UsersCompanion(
+        displayName: Value(user.displayName),
+        email: Value(user.email),
+        photoUrl: Value(user.photoURL),
+        updatedAt: Value(user.updatedAt),
+        fcmToken: Value(user.fcmToken),
+        // hasCompletedSetup et paymentMethods intentionnellement exclus :
+        // la valeur en DB est toujours prioritaire sur la réponse de l'API de login
+      )),
     );
-    _currentAppUser = user;
+    // Recharge depuis la DB pour refléter l'état réel (hasCompletedSetup préservé)
+    _currentAppUser = await loadCurrentUser() ?? user;
   }
 
   @override
   Future<void> updateUser(AppUser user) async {
     final response = await _apiClient.dio.patch('/auth/profile', data: user.toJson());
-    
+
     final serverData = response.data['user'] ?? response.data;
-    final updatedUser = AppUser.fromJson(serverData);
-    
-    await (_db.update(_db.users)..where((t) => t.id.equals(updatedUser.uid))).write(
+    final serverUser = AppUser.fromJson(serverData);
+
+    await (_db.update(_db.users)..where((t) => t.id.equals(user.uid))).write(
       UsersCompanion(
-        displayName: Value(updatedUser.displayName),
-        photoUrl: Value(updatedUser.photoURL),
-        fcmToken: Value(updatedUser.fcmToken),
-        hasCompletedSetup: Value(updatedUser.hasCompletedSetup),
-        paymentMethods: Value(updatedUser.paymentMethods),
+        displayName: Value(serverUser.displayName),
+        photoUrl: Value(serverUser.photoURL),
+        fcmToken: Value(serverUser.fcmToken),
+        // On fait confiance aux valeurs locales pour ces champs critiques,
+        // car le serveur peut ne pas les retourner correctement
+        hasCompletedSetup: Value(user.hasCompletedSetup),
+        paymentMethods: Value(user.paymentMethods),
       ),
     );
-    _currentAppUser = user;
+    _currentAppUser = serverUser.copyWith(
+      hasCompletedSetup: user.hasCompletedSetup,
+      paymentMethods: user.paymentMethods,
+    );
+  }
+
+  @override
+  Future<AppUser?> loadCurrentUser() async {
+    final row = await (_db.select(_db.users)..limit(1)).getSingleOrNull();
+    if (row == null) return null;
+    _currentAppUser = AppUser.fromDb(row);
+    return _currentAppUser;
   }
 
   @override

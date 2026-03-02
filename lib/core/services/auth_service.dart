@@ -21,6 +21,8 @@ abstract class IAuthService {
   Future<void> register(String username, String email, String password);
 
   AppUser? get currentUser;
+
+  void dispose();
 }
 
 class AuthService implements IAuthService {
@@ -29,37 +31,42 @@ class AuthService implements IAuthService {
   final IAppUserService _appUserService;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  bool _isGoogleSignInInitialized = false;
+
+  // Stocke le Future d'initialisation pour éviter les appels parallèles
+  Future<void>? _googleSignInInitFuture;
 
   final _authStreamController = StreamController<AppUser?>.broadcast();
 
   AuthService(this._appUserService) {
     _checkInitialAuth();
-    _initializeGoogleSignIn();
+    _googleSignInInitFuture = _initializeGoogleSignIn();
   }
 
   Future<void> _initializeGoogleSignIn() async {
     try {
-      await _googleSignIn.initialize();
-      _isGoogleSignInInitialized = true;
+      await _googleSignIn.initialize(
+        serverClientId: AppAssets.googleServerClientId,
+      );
     } catch (e) {
       if (kDebugMode) {
         print('Failed to initialize Google Sign-In: $e');
       }
+      // Réinitialiser pour permettre une nouvelle tentative
+      _googleSignInInitFuture = null;
     }
   }
 
   Future<void> _ensureGoogleSignInInitialized() async {
-    if (!_isGoogleSignInInitialized) {
-      await _initializeGoogleSignIn();
-    }
+    _googleSignInInitFuture ??= _initializeGoogleSignIn();
+    await _googleSignInInitFuture;
   }
-
 
   Future<void> _checkInitialAuth() async {
     final token = await _storage.read(key: 'accessToken');
     if (token != null) {
-      _authStreamController.add(_appUserService.currentAppUser);
+      // Charge l'utilisateur depuis la DB locale au lieu du cache mémoire vide
+      final user = await _appUserService.loadCurrentUser();
+      _authStreamController.add(user);
     } else {
       _authStreamController.add(null);
     }
@@ -107,8 +114,11 @@ class AuthService implements IAuthService {
       );
 
       await _handleAuthResponse(response.data);
+    } on DioException catch (e) {
+      throw e.response?.data['error'] ?? 'Erreur de connexion Google';
     } catch (e) {
-      throw 'Échec de la connexion Google';
+      if (kDebugMode) print('Google Sign-In error: $e');
+      rethrow;
     }
   }
 
@@ -141,11 +151,19 @@ class AuthService implements IAuthService {
     final accessToken = data['accessToken'];
     final refreshToken = data['refreshToken'];
 
-    await _storage.write(key: 'accessToken', value: accessToken);
-    await _storage.write(key: 'refreshToken', value: refreshToken);
+    if (accessToken == null || refreshToken == null) {
+      throw 'Réponse serveur invalide : tokens manquants';
+    }
 
-    final user = AppUser.fromJson(data['user'] ?? {});
-    await _appUserService.createUser(user);
+    await _storage.write(key: 'accessToken', value: accessToken as String);
+    await _storage.write(key: 'refreshToken', value: refreshToken as String);
+
+    final apiUser = AppUser.fromJson(data['user'] ?? {});
+    await _appUserService.createUser(apiUser);
+
+    // On émet l'user tel qu'il est réellement en DB après createUser,
+    // ce qui préserve hasCompletedSetup si l'user existait déjà
+    final user = _appUserService.currentAppUser ?? apiUser;
 
     final syncService = getIt<SyncService>();
     await syncService.bootstrapData();
@@ -159,11 +177,16 @@ class AuthService implements IAuthService {
     getIt<SyncService>().stopSync();
     await _storage.deleteAll();
     try {
-      await GoogleSignIn.instance.signOut();
+      await _googleSignIn.signOut();
     } catch (_) {}
     _authStreamController.add(null);
   }
 
   @override
   AppUser? get currentUser => _appUserService.currentAppUser;
+
+  @override
+  void dispose() {
+    _authStreamController.close();
+  }
 }
