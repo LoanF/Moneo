@@ -40,31 +40,38 @@ class SyncService {
       if (event.data == null || event.data!.trim() == "heartbeat") {
         return;
       }
-      
+
       final Map<String, dynamic> payload = jsonDecode(event.data!);
-      final String type = payload['type'];
+      final String type = payload['type']; // 'CREATE', 'UPDATE', 'DELETE'
+      final String model = payload['model'] ?? ''; // 'Transaction', 'BankAccount', 'MonthlyPayment'
       final data = payload['data'];
 
-      switch (type) {
-        case 'TRANSACTION_CREATED':
-        case 'TRANSACTION_UPDATED':
-          _db
-              .into(_db.transactions)
-              .insertOnConflictUpdate(Transaction.fromJson(data));
-          break;
-        case 'ACCOUNT_UPDATED':
-          _db
-              .into(_db.bankAccounts)
-              .insertOnConflictUpdate(BankAccount.fromJson(data));
-          break;
-        case 'TRANSACTION_DELETED':
-          (_db.delete(
-            _db.transactions,
-          )..where((t) => t.id.equals(data['id']))).go();
-          break;
-        case 'MONTHLY_PAYMENT_CREATED':
-          _db.into(_db.monthlyPayments).insertOnConflictUpdate(MonthlyPayment.fromJson(data));
-          break;
+      if (model == 'Transaction') {
+        if (type == 'CREATE' || type == 'UPDATE') {
+          _db.into(_db.transactions).insertOnConflictUpdate(Transaction.fromJson(data));
+        } else if (type == 'DELETE') {
+          (_db.delete(_db.transactions)..where((t) => t.id.equals(data['id']))).go();
+        }
+      } else if (model == 'BankAccount') {
+        if (type == 'CREATE' || type == 'UPDATE') {
+          _db.into(_db.bankAccounts).insertOnConflictUpdate(BankAccount.fromJson(data));
+        } else if (type == 'DELETE') {
+          (_db.delete(_db.bankAccounts)..where((t) => t.id.equals(data['id']))).go();
+        }
+      } else if (model == 'MonthlyPayment') {
+        if (type == 'CREATE' || type == 'UPDATE') {
+          final mp = Map<String, dynamic>.from(data);
+          mp['lastApplied'] = mp['lastProcessed'];
+          _db.into(_db.monthlyPayments).insertOnConflictUpdate(MonthlyPayment.fromJson(mp));
+        } else if (type == 'DELETE') {
+          (_db.delete(_db.monthlyPayments)..where((t) => t.id.equals(data['id']))).go();
+        }
+      } else if (model == 'PaymentMethod') {
+        if (type == 'CREATE' || type == 'UPDATE') {
+          _db.into(_db.paymentMethods).insertOnConflictUpdate(PaymentMethod.fromJson(data));
+        } else if (type == 'DELETE') {
+          (_db.delete(_db.paymentMethods)..where((t) => t.id.equals(data['id']))).go();
+        }
       }
     } catch (e) {
       if (kDebugMode) {
@@ -78,10 +85,11 @@ class SyncService {
 
     try {
       final responses = await Future.wait([
-        api.dio.get('/accounts'),
+        api.dio.get('/bank-accounts'),
         api.dio.get('/categories'),
         api.dio.get('/monthly-payments'),
         api.dio.get('/transactions?limit=100'),
+        api.dio.get('/payment-methods'),
       ]);
 
       await _db.batch((batch) {
@@ -95,8 +103,14 @@ class SyncService {
             data['iconCode'] = int.parse(data['iconCode']);
           }
           return Category.fromJson(data);
-        }).toList(), mode: InsertMode.insertOrReplace);        batch.insertAll(_db.monthlyPayments, (responses[2].data as List).map((e) => MonthlyPayment.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+        }).toList(), mode: InsertMode.insertOrReplace);
+        batch.insertAll(_db.monthlyPayments, (responses[2].data as List).map((e) {
+          final data = Map<String, dynamic>.from(e);
+          data['lastApplied'] = data['lastProcessed'];
+          return MonthlyPayment.fromJson(data);
+        }).toList(), mode: InsertMode.insertOrReplace);
         batch.insertAll(_db.transactions, (responses[3].data as List).map((e) => Transaction.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
+        batch.insertAll(_db.paymentMethods, (responses[4].data as List).map((e) => PaymentMethod.fromJson(e)).toList(), mode: InsertMode.insertOrReplace);
       });
     } catch (e) {
       if (kDebugMode) print('Erreur lors du bootstrap: $e');

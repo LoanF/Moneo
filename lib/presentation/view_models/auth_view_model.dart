@@ -5,17 +5,17 @@ import '../../core/database/app_database.dart';
 import '../../core/di.dart';
 import '../../core/notifiers/auth_notifier.dart';
 import '../../core/repositories/bank_account_repository.dart';
+import '../../core/repositories/payment_method_repository.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/user_service.dart';
-import '../../data/enums/auth_exception_code_enum.dart';
-import '../../data/enums/storage_child_enum.dart';
 import '../../data/models/app_user_model.dart';
 import 'common_view_model.dart';
 
 class AuthViewModel extends CommonViewModel {
   final IAuthService _authService;
   final IAppUserService _appUserService = getIt<IAppUserService>();
-  final BankAccountRepository _accountRepo = getIt<BankAccountRepository>(); // Repository Drift
+  final BankAccountRepository _accountRepo = getIt<BankAccountRepository>();
+  final PaymentMethodRepository _paymentMethodRepo = getIt<PaymentMethodRepository>();
   final _uuid = const Uuid();
 
   AuthViewModel(this._authService);
@@ -90,8 +90,8 @@ class AuthViewModel extends CommonViewModel {
       // }
 
       final updatedAppUser = user.copyWith(
-        displayName: newName.isNotEmpty ? newName : user.displayName,
-        photoURL: photoUrl ?? user.photoURL,
+        username: newName.isNotEmpty ? newName : user.username,
+        photoUrl: photoUrl ?? user.photoUrl,
       );
 
       await _appUserService.updateUser(updatedAppUser);
@@ -128,10 +128,16 @@ class AuthViewModel extends CommonViewModel {
         ));
       }
 
-      final updatedAppUser = user.copyWith(
-        hasCompletedSetup: true,
-        paymentMethods: paymentMethods,
-      );
+      for (var data in paymentMethods) {
+        final id = _uuid.v4();
+        await _paymentMethodRepo.createPaymentMethod(PaymentMethodsCompanion.insert(
+          id: id,
+          name: data['name'] as String,
+          type: Value(data['type'] as String? ?? 'debit'),
+        ));
+      }
+
+      final updatedAppUser = user.copyWith(hasCompletedSetup: true);
 
       await _appUserService.updateUser(updatedAppUser);
       getIt<AuthNotifier>().refreshProfile(updatedAppUser);

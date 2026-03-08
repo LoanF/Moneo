@@ -26,9 +26,9 @@ class AppUserService implements IAppUserService {
     await _db.into(_db.users).insert(
       UsersCompanion.insert(
         id: user.uid,
-        displayName: user.displayName,
+        username: user.username,
         email: user.email,
-        photoUrl: Value(user.photoURL),
+        photoUrl: Value(user.photoUrl),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         fcmToken: Value(user.fcmToken),
@@ -36,16 +36,13 @@ class AppUserService implements IAppUserService {
         paymentMethods: Value(user.paymentMethods),
       ),
       onConflict: DoUpdate((_) => UsersCompanion(
-        displayName: Value(user.displayName),
+        username: Value(user.username),
         email: Value(user.email),
-        photoUrl: Value(user.photoURL),
+        photoUrl: Value(user.photoUrl),
         updatedAt: Value(user.updatedAt),
         fcmToken: Value(user.fcmToken),
-        // hasCompletedSetup et paymentMethods intentionnellement exclus :
-        // la valeur en DB est toujours prioritaire sur la réponse de l'API de login
       )),
     );
-    // Recharge depuis la DB pour refléter l'état réel (hasCompletedSetup préservé)
     _currentAppUser = await loadCurrentUser() ?? user;
   }
 
@@ -58,8 +55,8 @@ class AppUserService implements IAppUserService {
 
     await (_db.update(_db.users)..where((t) => t.id.equals(user.uid))).write(
       UsersCompanion(
-        displayName: Value(serverUser.displayName),
-        photoUrl: Value(serverUser.photoURL),
+        username: Value(serverUser.username),
+        photoUrl: Value(serverUser.photoUrl),
         fcmToken: Value(serverUser.fcmToken),
         // On fait confiance aux valeurs locales pour ces champs critiques,
         // car le serveur peut ne pas les retourner correctement
@@ -86,8 +83,13 @@ class AppUserService implements IAppUserService {
     final fcmToken = await _firebaseMessaging.getToken();
     if (fcmToken == null) return appUser;
 
+    await _apiClient.dio.patch('/auth/profile', data: {'fcmToken': fcmToken});
+
     final updated = appUser.copyWith(fcmToken: fcmToken);
-    await updateUser(updated);
+    await (_db.update(_db.users)..where((t) => t.id.equals(appUser.uid))).write(
+      UsersCompanion(fcmToken: Value(fcmToken)),
+    );
+    _currentAppUser = updated;
     return updated;
   }
 

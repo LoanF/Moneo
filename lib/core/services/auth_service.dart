@@ -163,7 +163,8 @@ class AuthService implements IAuthService {
 
     // On émet l'user tel qu'il est réellement en DB après createUser,
     // ce qui préserve hasCompletedSetup si l'user existait déjà
-    final user = _appUserService.currentAppUser ?? apiUser;
+    var user = _appUserService.currentAppUser ?? apiUser;
+    user = await _appUserService.updateFcmToken(user);
 
     final syncService = getIt<SyncService>();
     await syncService.bootstrapData();

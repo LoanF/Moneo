@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:moneo/core/repositories/bank_account_repository.dart';
 import 'package:moneo/core/repositories/category_repository.dart';
 import 'package:moneo/core/repositories/monthly_payment_repository.dart';
+import 'package:moneo/core/repositories/payment_method_repository.dart';
 import 'package:moneo/core/repositories/transaction_repository.dart';
 import 'package:moneo/core/services/monthly_processor.dart';
 import 'package:moneo/core/services/sync_service.dart';
@@ -24,6 +25,7 @@ void configureDependencies() {
   getIt.registerLazySingleton(() => BankAccountRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => CategoryRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => MonthlyPaymentRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
+  getIt.registerLazySingleton(() => PaymentMethodRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => MonthlyProcessor(getIt<AppDatabase>(), getIt<TransactionRepository>()));
 
   getIt.registerLazySingleton<IAuthService>(() => AuthService(getIt<IAppUserService>()));

@@ -19,7 +19,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void initState() {
     super.initState();
     final user = context.read<AuthViewModel>().currentUser;
-    _nameController = TextEditingController(text: user?.displayName);
+    _nameController = TextEditingController(text: user?.username);
   }
 
   Future<void> _pickImage() async {
@@ -56,8 +56,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     radius: 60,
                     backgroundImage: _imageFile != null
                         ? FileImage(_imageFile!) as ImageProvider
-                        : (user?.photoURL != null ? NetworkImage(user!.photoURL!) : null),
-                    child: (user?.photoURL == null && _imageFile == null) ? const Icon(Icons.person, size: 50) : null,
+                        : (user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null),
+                    child: (user?.photoUrl == null && _imageFile == null) ? const Icon(Icons.person, size: 50) : null,
                   ),
                   Positioned(
                     bottom: 0,

@@ -52,7 +52,7 @@ class SettingsPage extends StatelessWidget {
                           CircleAvatar(
                             radius: 35,
                             backgroundColor: AppColors.mainColor.withValues(alpha: 0.1),
-                            backgroundImage: _getProfileImage(user?.photoURL, user?.email),
+                            backgroundImage: _getProfileImage(user?.photoUrl, user?.email),
                           ),
                           const SizedBox(width: 20),
                           Expanded(
@@ -60,7 +60,7 @@ class SettingsPage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user?.displayName ?? "Utilisateur",
+                                  user?.username ?? "Utilisateur",
                                   style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,

@@ -17,6 +17,7 @@ class Transactions extends Table {
   BoolColumn get isChecked => boolean().withDefault(const Constant(false))();
   TextColumn get accountId => text()();
   TextColumn get categoryId => text().nullable()();
+  TextColumn get paymentMethodId => text().nullable()();
   BoolColumn get isMonthly => boolean().withDefault(const Constant(false))();
 
   @override
@@ -27,7 +28,9 @@ class BankAccounts extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   RealColumn get balance => real().withDefault(const Constant(0.0))();
-  
+  TextColumn get type => text().withDefault(const Constant('checking'))();
+  TextColumn get currency => text().withDefault(const Constant('EUR'))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -62,6 +65,15 @@ class MonthlyPayments extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class PaymentMethods extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get type => text().withDefault(const Constant('debit'))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class PaymentMethodsConverter extends TypeConverter<List<Map<String, dynamic>>, String> {
   const PaymentMethodsConverter();
 
@@ -79,7 +91,7 @@ class PaymentMethodsConverter extends TypeConverter<List<Map<String, dynamic>>, 
 
 class Users extends Table {
   TextColumn get id => text()();
-  TextColumn get displayName => text()();
+  TextColumn get username => text()();
   TextColumn get email => text()();
   TextColumn get photoUrl => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -93,12 +105,29 @@ class Users extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Transactions, BankAccounts, Categories, MonthlyPayments, Users])
+@DriftDatabase(tables: [Transactions, BankAccounts, Categories, MonthlyPayments, PaymentMethods, Users])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 4;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.renameColumn(users, 'display_name', users.username);
+      }
+      if (from < 3) {
+        await m.addColumn(bankAccounts, bankAccounts.type);
+        await m.addColumn(bankAccounts, bankAccounts.currency);
+        await m.addColumn(transactions, transactions.paymentMethodId);
+      }
+      if (from < 4) {
+        await m.createTable(paymentMethods);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

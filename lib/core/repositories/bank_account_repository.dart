@@ -19,7 +19,7 @@ class BankAccountRepository {
 
     try {
       final response = await _api.dio.post(
-        '/accounts',
+        '/bank-accounts',
         data: {
           'id': entry.id.value,
           'name': entry.name.value,
@@ -39,7 +39,7 @@ class BankAccountRepository {
 
     try {
       await _api.dio.patch(
-        '/accounts/$id',
+        '/bank-accounts/$id',
         data: {
           if (entry.name.present) 'name': entry.name.value,
           if (entry.balance.present) 'balance': entry.balance.value,
@@ -52,7 +52,7 @@ class BankAccountRepository {
     await (_db.delete(_db.bankAccounts)..where((t) => t.id.equals(id))).go();
 
     try {
-      await _api.dio.delete('/accounts/$id');
+      await _api.dio.delete('/bank-accounts/$id');
     } catch (_) {}
   }
 }

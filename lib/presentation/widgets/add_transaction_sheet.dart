@@ -48,7 +48,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _amountController.text = widget.transaction!.amount.abs().toStringAsFixed(2);
       _isExpense = widget.transaction!.amount < 0;
       _selectedDate = widget.transaction!.date;
-      _isTransfer = widget.transaction!.categoryId == 'transfert';
+      _isTransfer = widget.transaction!.type == 'transfer';
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _setInitialCategory();
@@ -154,7 +154,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 decoration: const InputDecoration(
                   hintText: "0.00 €",
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: AppColors.thirdBackground),
                 ),
               ),
               const SizedBox(height: 16),
@@ -416,7 +415,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         final finalAmount = _isExpense ? -amount : amount;
         String? finalCategoryId;
         if (_selectedParent != null) {
-          finalCategoryId = _selectedSub?.id ?? _selectedParent!.id;
+          final rawId = _selectedSub?.id ?? _selectedParent!.id;
+          // Strip the virtual "other_" prefix used locally for UI
+          finalCategoryId = rawId.startsWith('other_')
+              ? rawId.replaceFirst('other_', '')
+              : rawId;
         }
 
         if (widget.transaction != null) {
