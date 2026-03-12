@@ -18,14 +18,19 @@ class ApiClient {
       },
       onError: (DioException e, handler) async {
         if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-          String? refreshToken = await storage.read(key: 'refreshToken');
-          final response = await dio.post('/auth/refresh', data: {'token': refreshToken});
+          try {
+            String? refreshToken = await storage.read(key: 'refreshToken');
+            final response = await dio.post('/auth/refresh', data: {'token': refreshToken});
+            final data = response.data;
 
-          if (response.statusCode == 200) {
-            await storage.write(key: 'accessToken', value: response.data['accessToken']);
-            await storage.write(key: 'refreshToken', value: response.data['refreshToken']);
+            if (response.statusCode == 200 && data is Map) {
+              await storage.write(key: 'accessToken', value: data['accessToken'] as String);
+              await storage.write(key: 'refreshToken', value: data['refreshToken'] as String);
 
-            return handler.resolve(await dio.fetch(e.requestOptions));
+              return handler.resolve(await dio.fetch(e.requestOptions));
+            }
+          } catch (_) {
+            // Refresh failed, propagate original error
           }
         }
         return handler.next(e);

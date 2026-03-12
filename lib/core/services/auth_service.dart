@@ -88,7 +88,11 @@ class AuthService implements IAuthService {
 
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['error'] ?? 'Erreur de connexion';
+      final data = e.response?.data;
+      if (data is Map) {
+        throw data['error'] ?? 'Erreur de connexion';
+      }
+      throw 'Erreur de connexion';
     }
   }
 
@@ -115,7 +119,11 @@ class AuthService implements IAuthService {
 
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
-      throw e.response?.data['error'] ?? 'Erreur de connexion Google';
+      final data = e.response?.data;
+      if (data is Map) {
+        throw data['error'] ?? 'Erreur de connexion Google';
+      }
+      throw 'Erreur de connexion Google';
     } catch (e) {
       if (kDebugMode) print('Google Sign-In error: $e');
       rethrow;
@@ -137,11 +145,14 @@ class AuthService implements IAuthService {
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       final data = e.response?.data;
-      if (data != null && data['errors'] != null) {
-        throw data['errors'][0]['msg'];
-      }
-      if (data != null && data['error'] != null) {
-        throw data['error'];
+      if (data is Map) {
+        if (data['errors'] is List && (data['errors'] as List).isNotEmpty) {
+          final firstError = (data['errors'] as List)[0];
+          throw firstError is Map ? (firstError['msg'] ?? 'Erreur') : firstError.toString();
+        }
+        if (data['error'] != null) {
+          throw data['error'];
+        }
       }
       throw 'Une erreur réseau est survenue.';
     }
