@@ -194,7 +194,7 @@ class HomeViewModel extends CommonViewModel {
 
   Future<void> createCategory({
     required String name,
-    required int iconCode,
+    required String iconCode,
     required int colorValue,
     String? parentId,
   }) async {
@@ -215,7 +215,7 @@ class HomeViewModel extends CommonViewModel {
   Future<void> saveCategory({
     String? id,
     required String name,
-    required int iconCode,
+    required String iconCode,
     required int colorValue,
     String? parentId,
   }) async {

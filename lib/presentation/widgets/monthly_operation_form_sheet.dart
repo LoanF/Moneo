@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import '../../core/database/app_database.dart';
+import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
 
 class MonthlyOperationFormSheet extends StatefulWidget {
@@ -257,7 +258,12 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(IconData(cat.iconCode, fontFamily: 'MaterialIcons'), color: isSelected ? Color(cat.colorValue) : AppColors.grey1, size: 24),
+                  Icon(
+                      IconHelper.getIcon(cat.iconCode),
+                      color: isSelected ? Color(cat.colorValue) : AppColors.grey1,
+                      size: 24
+                  ),
+                  const SizedBox(height: 4),
                   Text(cat.name, style: const TextStyle(fontSize: 10), maxLines: 1),
                 ],
               ),

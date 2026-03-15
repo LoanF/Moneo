@@ -96,6 +96,10 @@ class _HomePageState extends State<HomePage> {
       scrolledUnderElevation: 0,
       actions: [
         IconButton(
+          icon: const Icon(Icons.bar_chart_rounded, color: AppColors.mainText),
+          onPressed: () => context.push(AppRoutes.stats),
+        ),
+        IconButton(
           icon: const Icon(Icons.settings_outlined, color: AppColors.mainText),
           onPressed: () => context.push(AppRoutes.settings),
         ),
@@ -201,7 +205,7 @@ class _HomePageState extends State<HomePage> {
             orElse: () => Category(
               id: 'autre',
               name: 'Autre',
-              iconCode: Icons.help_outline_rounded.codePoint,
+              iconCode: Icons.help_outline_rounded.codePoint.toString(),
               colorValue: AppColors.grey1.toARGB32(),
               userId: '',
             ),

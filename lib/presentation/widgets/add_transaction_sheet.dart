@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/database/app_database.dart';
 import '../../core/di.dart';
+import '../../core/helpers/icon_helper.dart';
 import '../../core/repositories/category_repository.dart';
-import '../../core/services/user_service.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/home_view_model.dart';
 
@@ -30,7 +30,6 @@ class AddTransactionSheet extends StatefulWidget {
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
-  final _userService = getIt<IAppUserService>();
 
   bool _isExpense = true;
   bool _isTransfer = false;
@@ -364,7 +363,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    IconData(cat.iconCode, fontFamily: 'MaterialIcons'),
+                    IconHelper.getIcon(cat.iconCode),
                     color: isSelected ? color : AppColors.grey1,
                     size: 24,
                   ),

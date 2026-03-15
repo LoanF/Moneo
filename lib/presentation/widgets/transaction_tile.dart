@@ -1,11 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/database/app_database.dart';
+import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
 
 class TransactionTile extends StatelessWidget {
   final Transaction transaction;
-  final int? categoryIcon;
+  final String? categoryIcon;
   final int? categoryColor;
 
   const TransactionTile({super.key, required this.transaction, this.categoryIcon, this.categoryColor});
@@ -16,11 +17,6 @@ class TransactionTile extends StatelessWidget {
     final Color iconColor = hasValidColor
         ? Color(categoryColor!)
         : (transaction.amount < 0 ? AppColors.mainColor : AppColors.primaryGreen);
-    
-    final bool hasValidIcon = categoryIcon != null && categoryIcon != 0;
-    final int iconToDisplay = hasValidIcon
-        ? categoryIcon!
-        : Icons.help_outline_rounded.codePoint;
 
     return Container(
       decoration: BoxDecoration(
@@ -38,7 +34,7 @@ class TransactionTile extends StatelessWidget {
           child: Icon(
             transaction.isChecked
                 ? Icons.check_circle_rounded
-                : IconData(iconToDisplay, fontFamily: 'MaterialIcons'),
+                : IconHelper.getIcon(categoryIcon ?? ""),
             color: transaction.isChecked ? AppColors.primaryGreen : iconColor,
             size: 24,
           ),

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:moneo/presentation/view_models/home_view_model.dart';
+import 'package:moneo/presentation/view_models/stats_view_model.dart';
 import 'package:provider/provider.dart';
 
 import 'core/di.dart';
@@ -41,6 +42,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => getIt<AuthViewModel>()),
         ChangeNotifierProvider(create: (_) => getIt<HomeViewModel>()),
+        ChangeNotifierProvider(create: (_) => getIt<StatsViewModel>()),
         ChangeNotifierProvider(create: (_) => getIt<AuthNotifier>()),
       ],
       child: const Moneo(),

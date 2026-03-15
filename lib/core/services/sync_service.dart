@@ -99,9 +99,6 @@ class SyncService {
           if (data['colorValue'] is String) {
             data['colorValue'] = int.parse(data['colorValue']);
           }
-          if (data['iconCode'] is String) {
-            data['iconCode'] = int.parse(data['iconCode']);
-          }
           return Category.fromJson(data);
         }).toList(), mode: InsertMode.insertOrReplace);
         batch.insertAll(_db.monthlyPayments, (responses[2].data as List).map((e) {

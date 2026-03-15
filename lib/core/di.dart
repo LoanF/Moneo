@@ -9,6 +9,7 @@ import 'package:moneo/core/services/sync_service.dart';
 import '../core/services/user_service.dart';
 import '../presentation/view_models/home_view_model.dart';
 import '../presentation/view_models/auth_view_model.dart';
+import '../presentation/view_models/stats_view_model.dart';
 import 'database/app_database.dart';
 import 'interceptor/api_client.dart';
 import 'notifiers/auth_notifier.dart';
@@ -39,6 +40,7 @@ void configureDependencies() {
     getIt<MonthlyProcessor>(),
   ));
   
+  getIt.registerSingleton<StatsViewModel>(StatsViewModel(getIt<AppDatabase>()));
   getIt.registerSingleton<AuthNotifier>(AuthNotifier(getIt<IAuthService>()));
   getIt.registerLazySingleton(() => SyncService(getIt<AppDatabase>()));
 }

@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
 import '../../core/database/app_database.dart';
 import '../view_models/home_view_model.dart';
@@ -29,15 +30,15 @@ class CategoriesManagerPage extends StatelessWidget {
       ),
       body: mainCategories.isEmpty
           ? const Center(child: Text("Aucune catégorie", style: TextStyle(color: AppColors.secondaryText)))
-          : ListView.builder(
-        padding: const EdgeInsets.only(bottom: 100, top: 16),
+          : SafeArea(child: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 100),
         itemCount: mainCategories.length,
         itemBuilder: (context, index) {
           final parent = mainCategories[index];
           final subCats = categories.where((c) => c.parentId == parent.id).toList();
           return _buildCategoryGroup(context, parent, subCats, vm);
         },
-      ),
+      )),
     );
   }
 
@@ -56,13 +57,20 @@ class CategoriesManagerPage extends StatelessWidget {
             children: [
               ListTile(
                 leading: _buildIconCircle(parent.iconCode, parent.colorValue),
-                title: Text(parent.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.mainText)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(icon: const Icon(Icons.add_circle_outline, size: 20), onPressed: () => _showCategorySheet(context, null, parent: parent)),
-                    IconButton(icon: const Icon(Icons.edit_outlined, size: 20), onPressed: () => _showCategorySheet(context, parent)),
-                    IconButton(icon: const Icon(Icons.delete_outline, size: 20), onPressed: () => _confirmDelete(context, parent, children, vm)),
+                title: Text(parent.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.mainText), overflow: TextOverflow.ellipsis),
+                trailing: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: AppColors.grey1),
+                  color: AppColors.secondaryBackground,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  onSelected: (value) {
+                    if (value == 'add') _showCategorySheet(context, null, parent: parent);
+                    if (value == 'edit') _showCategorySheet(context, parent);
+                    if (value == 'delete') _confirmDelete(context, parent, children, vm);
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'add', child: Text("Ajouter sous-cat.", style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 'edit', child: Text("Modifier", style: TextStyle(color: Colors.white))),
+                    const PopupMenuItem(value: 'delete', child: Text("Supprimer", style: TextStyle(color: Colors.redAccent))),
                   ],
                 ),
               ),
@@ -83,11 +91,18 @@ class CategoriesManagerPage extends StatelessWidget {
     );
   }
 
-  Widget _buildIconCircle(int code, int color) {
+  Widget _buildIconCircle(String iconName, int color) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Color(color).withValues(alpha: 0.15), shape: BoxShape.circle),
-      child: Icon(IconData(code, fontFamily: 'MaterialIcons'), color: Color(color), size: 22),
+      decoration: BoxDecoration(
+          color: Color(color).withValues(alpha: 0.15),
+          shape: BoxShape.circle
+      ),
+      child: Icon(
+        IconHelper.getIcon(iconName),
+        color: Color(color),
+        size: 22,
+      ),
     );
   }
 
@@ -99,11 +114,11 @@ class CategoriesManagerPage extends StatelessWidget {
       builder: (context) => CategoryFormSheet(
         category: category,
         parentId: parent?.id,
-        onSave: (name, icon, color) {
+        onSave: (name, iconName, color) {
           context.read<HomeViewModel>().saveCategory(
             id: category?.id,
             name: name,
-            iconCode: icon,
+            iconCode: iconName,
             colorValue: color,
             parentId: parent?.id ?? category?.parentId,
           );

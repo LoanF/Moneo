@@ -39,7 +39,7 @@ class Categories extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   @JsonKey('iconCode')
-  IntColumn get iconCode => integer()();
+  TextColumn get iconCode => text()();
   @JsonKey('colorValue')
   IntColumn get colorValue => integer()();
   @JsonKey('userId')
