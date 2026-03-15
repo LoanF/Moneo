@@ -88,14 +88,26 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.thirdBackground,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Text(
-                  widget.operation == null ? "Nouvelle Mensualisation" : "Modifier la Mensualisation",
+                  widget.operation == null ? "Nouvelle mensualisation" : "Modifier la mensualisation",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold)
+                  style: const TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.w800)
               ),
               const SizedBox(height: 24),
 

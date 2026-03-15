@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/themes/app_colors.dart';
 import '../../core/database/app_database.dart';
@@ -15,58 +15,149 @@ class AccountsManagerPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.mainBackground,
       appBar: AppBar(
-        title: const Text("Mes Comptes", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text("Mes comptes", style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.mainText)),
+        centerTitle: false,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: vm.accounts.length,
-        itemBuilder: (context, index) {
-          final account = vm.accounts[index];
-          return _buildAccountTile(context, account, vm);
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAccountForm(context),
-        backgroundColor: AppColors.mainColor,
-        child: const Icon(Icons.add, color: Colors.white),
+      body: vm.accounts.isEmpty
+          ? _buildEmptyState()
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+              itemCount: vm.accounts.length,
+              itemBuilder: (context, index) => _buildAccountTile(context, vm.accounts[index], vm),
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showForm(context),
+        label: const Text("Ajouter", style: TextStyle(fontWeight: FontWeight.bold)),
+        icon: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _buildAccountTile(BuildContext context, BankAccount account, HomeViewModel vm) {
-    return Card(
-      color: AppColors.secondaryBackground,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        title: Text(account.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        subtitle: Text("${account.balance.toStringAsFixed(2)} €", style: const TextStyle(color: AppColors.grey1)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, color: AppColors.grey1),
-              onPressed: () => _showAccountForm(context, account: account),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.primaryRed),
-              onPressed: () => _confirmDelete(context, account, vm),
-            ),
-          ],
+    final isPositive = account.balance >= 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryBackground,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _showForm(context, account: account),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.mainColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.mainColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.name,
+                      style: const TextStyle(
+                        color: AppColors.mainText,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      account.currency,
+                      style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "${isPositive ? '' : '-'}${account.balance.abs().toStringAsFixed(2)} €",
+                    style: TextStyle(
+                      color: isPositive ? AppColors.primaryGreen : AppColors.primaryRed,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      _actionIcon(
+                        icon: Icons.edit_outlined,
+                        color: AppColors.grey1,
+                        onTap: () => _showForm(context, account: account),
+                      ),
+                      const SizedBox(width: 4),
+                      _actionIcon(
+                        icon: Icons.delete_outline_rounded,
+                        color: AppColors.primaryRed,
+                        onTap: () => _confirmDelete(context, account, vm),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showAccountForm(BuildContext context, {BankAccount? account}) {
+  Widget _actionIcon({required IconData icon, required Color color, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 16),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.secondaryBackground,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppColors.grey1),
+          ),
+          const SizedBox(height: 20),
+          const Text("Aucun compte", style: TextStyle(color: AppColors.mainText, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          const Text("Ajoutez votre premier compte bancaire", style: TextStyle(color: AppColors.secondaryText, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  void _showForm(BuildContext context, {BankAccount? account}) {
     final vm = context.read<HomeViewModel>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AccountFormSheet(
+      builder: (_) => AccountFormSheet(
         account: account,
         onSave: (name, balance) {
           if (account == null) {
@@ -82,14 +173,16 @@ class AccountsManagerPage extends StatelessWidget {
   void _confirmDelete(BuildContext context, BankAccount account, HomeViewModel vm) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.secondaryBackground,
-        title: const Text("Supprimer le compte ?", style: TextStyle(color: Colors.white)),
-        content: Text("Toutes les transactions liées à '${account.name}' seront conservées ou supprimées selon votre API."),
+      builder: (_) => AlertDialog(
+        title: const Text("Supprimer le compte ?"),
+        content: Text("Le compte « ${account.name} » sera supprimé définitivement."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Annuler")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Annuler"),
+          ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryRed),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryRed, minimumSize: Size.zero),
             onPressed: () {
               vm.deleteAccount(account);
               Navigator.pop(context);

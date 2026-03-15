@@ -130,11 +130,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.thirdBackground,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const Text(
                 "Montant de l'opération",
                 textAlign: TextAlign.center,
