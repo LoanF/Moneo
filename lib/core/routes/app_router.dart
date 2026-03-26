@@ -3,6 +3,7 @@ import 'package:moneo/presentation/views/accounts_manager_page.dart';
 import 'package:moneo/presentation/views/edit_profile_page.dart';
 import 'package:moneo/presentation/views/home_page.dart';
 import 'package:moneo/presentation/views/monthly_operations_page.dart';
+import 'package:moneo/presentation/views/stats_page.dart';
 import 'package:moneo/presentation/views/settings_page.dart';
 import '../../presentation/views/categories_manager_page.dart';
 import '../../presentation/views/login_page.dart';
@@ -102,6 +103,11 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.monthlyOperations,
       name: 'monthlyOperations',
       builder: (context, state) => const MonthlyOperationsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.stats,
+      name: 'stats',
+      builder: (context, state) => const StatsPage(),
     ),
   ],
 );

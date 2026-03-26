@@ -1,27 +1,32 @@
 import 'dart:io';
-
+import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
+import '../../core/database/app_database.dart';
 import '../../core/di.dart';
 import '../../core/notifiers/auth_notifier.dart';
+import '../../core/repositories/bank_account_repository.dart';
+import '../../core/repositories/payment_method_repository.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/user_service.dart';
-import '../../data/enums/auth_exception_code_enum.dart';
-import '../../data/enums/storage_child_enum.dart';
-import '../../data/models/account_model.dart';
 import '../../data/models/app_user_model.dart';
 import 'common_view_model.dart';
 
 class AuthViewModel extends CommonViewModel {
-  final IAuthService _auth = getIt<IAuthService>();
+  final IAuthService _authService;
   final IAppUserService _appUserService = getIt<IAppUserService>();
+  final BankAccountRepository _accountRepo = getIt<BankAccountRepository>();
+  final PaymentMethodRepository _paymentMethodRepo = getIt<PaymentMethodRepository>();
+  final _uuid = const Uuid();
 
-  AppUser? get currentUser => _auth.currentUser;
-
+  AuthViewModel(this._authService);
+  AppUser? get currentUser => _authService.currentUser;
+  
   Future<bool> login(String email, String password) async {
     isLoading = true;
     errorMessage = null;
 
     try {
-      await _auth.signInWithEmail(email, password);
+      await _authService.signInWithEmail(email, password);
       isLoading = false;
       return true;
     } catch (e) {
@@ -35,7 +40,7 @@ class AuthViewModel extends CommonViewModel {
     isLoading = true;
     errorMessage = null;
     try {
-      await _auth.signInWithGoogle();
+      await _authService.signInWithGoogle();
       isLoading = false;
       return true;
     } catch (e) {
@@ -51,7 +56,7 @@ class AuthViewModel extends CommonViewModel {
 
     try {
       final username = email.split('@')[0];
-      await _auth.register(username, email, password);
+      await _authService.register(username, email, password);
       isLoading = false;
       return true;
     } catch (e) {
@@ -62,7 +67,7 @@ class AuthViewModel extends CommonViewModel {
   }
 
   Future<void> logout() async {
-    await _auth.signOut();
+    await _authService.signOut();
   }
 
   Future<bool> updateProfile({
@@ -73,7 +78,7 @@ class AuthViewModel extends CommonViewModel {
     errorMessage = null;
 
     try {
-      final user = _auth.currentUser;
+      final user = _authService.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
 
       String? photoUrl;
@@ -85,12 +90,10 @@ class AuthViewModel extends CommonViewModel {
       // }
 
       final updatedAppUser = user.copyWith(
-        displayName: newName.isNotEmpty ? newName : user.displayName,
-        photoURL: photoUrl ?? user.photoURL,
+        username: newName.isNotEmpty ? newName : user.username,
+        photoUrl: photoUrl ?? user.photoUrl,
       );
 
-      if (updatedAppUser == null) throw Exception("Profil introuvable");
-      
       await _appUserService.updateUser(updatedAppUser);
 
       getIt<AuthNotifier>().refreshProfile(updatedAppUser);
@@ -112,31 +115,29 @@ class AuthViewModel extends CommonViewModel {
     errorMessage = null;
 
     try {
-      final uid = currentUser?.uid;
-      if (uid == null) throw Exception("Utilisateur non connecté");
-
+      final user = _authService.currentUser;
+      if (user == null) throw Exception("Utilisateur non connecté");
+      
       for (var data in accounts) {
-        final String accountId = "${DateTime.now().millisecondsSinceEpoch}_${data['name']}";
+        final id = _uuid.v4();
 
-        final account = Account(
-          id: accountId,
+        await _accountRepo.createAccount(BankAccountsCompanion.insert(
+          id: id,
           name: data['name'],
-          initialBalance: (data['balance'] as num).toDouble(),
-          currentBalance: (data['balance'] as num).toDouble(),
-        );
-
-        await _appUserService.createAccount(uid, account);
+          balance: Value((data['balance'] as num).toDouble()),
+        ));
       }
 
-      final currentUserProfile = _appUserService.currentAppUser;
-      if (currentUserProfile == null) throw Exception("Profil introuvable");
+      for (var data in paymentMethods) {
+        final id = _uuid.v4();
+        await _paymentMethodRepo.createPaymentMethod(PaymentMethodsCompanion.insert(
+          id: id,
+          name: data['name'] as String,
+          type: Value(data['type'] as String? ?? 'debit'),
+        ));
+      }
 
-      final updatedAppUser = currentUserProfile.copyWith(
-        hasCompletedSetup: true,
-        paymentMethods: paymentMethods,
-      );
-      
-      if (updatedAppUser == null) throw Exception("Profil introuvable");
+      final updatedAppUser = user.copyWith(hasCompletedSetup: true);
 
       await _appUserService.updateUser(updatedAppUser);
       getIt<AuthNotifier>().refreshProfile(updatedAppUser);

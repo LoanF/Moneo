@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class AppUser {
   final String uid;
-  final String displayName;
+  final String username;
   final String email;
-  final String? photoURL;
+  final String? photoUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? fcmToken;
@@ -13,9 +11,9 @@ class AppUser {
 
   AppUser({
     required this.uid,
-    required this.displayName,
+    required this.username,
     required this.email,
-    this.photoURL,
+    this.photoUrl,
     required this.createdAt,
     required this.updatedAt,
     this.fcmToken,
@@ -25,48 +23,53 @@ class AppUser {
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
-      uid: json['uid'],
-      displayName: json['displayName'],
-      email: json['email'],
-      photoURL: json['photoURL'],
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : DateTime.now(),
+      uid: json['uid'] ?? json['id'] ?? '',
+      username: json['username'] ?? '',
+      email: json['email'] ?? '',
+      photoUrl: json['photoUrl'],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
       fcmToken: json['fcmToken'],
       hasCompletedSetup: json['hasCompletedSetup'] ?? false,
-      paymentMethods: List<Map<String, dynamic>>.from(json['paymentMethods'] ?? []),
+      paymentMethods: List<Map<String, dynamic>>.from(json['payment_methods'] ?? json['paymentMethods'] ?? []),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'uid': uid,
-      'displayName': displayName,
-      'email': email,
-      'photoURL': photoURL,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'fcmToken': fcmToken,
+      'username': username,
+      if (photoUrl != null) 'photoUrl': photoUrl,
+      if (fcmToken != null) 'fcmToken': fcmToken,
       'hasCompletedSetup': hasCompletedSetup,
-      'paymentMethods': paymentMethods,
     };
   }
 
-  AppUser? copyWith({
-    String? displayName,
-    String? photoURL,
+  factory AppUser.fromDb(dynamic userDb) {
+    return AppUser(
+      uid: userDb.id,
+      username: userDb.username,
+      email: userDb.email,
+      photoUrl: userDb.photoUrl,
+      createdAt: userDb.createdAt,
+      updatedAt: userDb.updatedAt,
+      fcmToken: userDb.fcmToken,
+      hasCompletedSetup: userDb.hasCompletedSetup,
+      paymentMethods: userDb.paymentMethods ?? [],
+    );
+  }
+
+  AppUser copyWith({
+    String? username,
+    String? photoUrl,
     String? fcmToken,
     bool? hasCompletedSetup,
     List<Map<String, dynamic>>? paymentMethods,
   }) {
     return AppUser(
       uid: uid,
-      displayName: displayName ?? this.displayName,
+      username: username ?? this.username,
       email: email,
-      photoURL: photoURL ?? this.photoURL,
+      photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt,
       updatedAt: updatedAt,
       fcmToken: fcmToken ?? this.fcmToken,

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/di.dart';
+import '../../core/database/app_database.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
+import '../../core/utils/fake_data_generator.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/home_view_model.dart';
 
@@ -30,8 +33,6 @@ class SettingsPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 16),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -52,7 +53,7 @@ class SettingsPage extends StatelessWidget {
                           CircleAvatar(
                             radius: 35,
                             backgroundColor: AppColors.mainColor.withValues(alpha: 0.1),
-                            backgroundImage: _getProfileImage(user?.photoURL, user?.email),
+                            backgroundImage: _getProfileImage(user?.photoUrl, user?.email),
                           ),
                           const SizedBox(width: 20),
                           Expanded(
@@ -60,7 +61,7 @@ class SettingsPage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user?.displayName ?? "Utilisateur",
+                                  user?.username ?? "Utilisateur",
                                   style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -90,8 +91,6 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
             ),
-
-            const SizedBox(height: 16),
 
             _buildSectionHeader("Configuration"),
             _buildSettingsGroup([
@@ -128,6 +127,24 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.dark_mode_rounded,
                 iconColor: AppColors.grey2,
                 onTap: () {},
+              ),
+            ]),
+
+            _buildSectionHeader("Développement"),
+            _buildSettingsGroup([
+              _buildNavigationItem(
+                label: "Générer des données de test",
+                icon: Icons.science_rounded,
+                iconColor: Colors.teal,
+                showArrow: false,
+                onTap: () => _generateFakeData(context),
+              ),
+              _buildNavigationItem(
+                label: "Effacer toutes les transactions",
+                icon: Icons.delete_sweep_rounded,
+                iconColor: AppColors.error,
+                showArrow: false,
+                onTap: () => _clearAllData(context),
               ),
             ]),
 
@@ -244,6 +261,44 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _generateFakeData(BuildContext context) async {
+    final generator = FakeDataGenerator(getIt<AppDatabase>());
+    await generator.generate();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Données de test générées !")),
+      );
+    }
+  }
+
+  Future<void> _clearAllData(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.secondaryBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Effacer les transactions ?", style: TextStyle(color: AppColors.mainText)),
+        content: const Text("Toutes les transactions locales seront supprimées.", style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Annuler")),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Effacer"),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await FakeDataGenerator(getIt<AppDatabase>()).clear();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Transactions supprimées.")),
+        );
+      }
+    }
   }
 
   ImageProvider _getProfileImage(String? url, String? email) {
