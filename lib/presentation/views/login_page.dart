@@ -178,10 +178,9 @@ class _LoginPageState extends State<LoginPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.network(
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
+          SvgPicture.asset(
+            'assets/images/google_logo.svg',
             height: 18,
-            errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata_rounded, size: 20),
           ),
           const SizedBox(width: 10),
           const Text("Continuer avec Google"),
@@ -212,20 +211,29 @@ class _LoginPageState extends State<LoginPage> {
     FocusScope.of(context).unfocus();
     final success = await vm.login(_emailController.text, _passwordController.text);
     if (!context.mounted) return;
-    if (success) {
-      context.go(AppRoutes.home);
-    } else {
+    if (!success) {
       _showError(context, vm.errorMessage ?? "Erreur de connexion");
+      return;
     }
+    _navigateAfterAuth(context, vm);
   }
 
   Future<void> _loginWithGoogle(BuildContext context, AuthViewModel vm) async {
     final success = await vm.loginWithGoogle();
     if (!context.mounted) return;
-    if (success) {
-      context.go(AppRoutes.home);
-    } else {
+    if (!success) {
       _showError(context, vm.errorMessage ?? "Erreur");
+      return;
+    }
+    _navigateAfterAuth(context, vm);
+  }
+
+  void _navigateAfterAuth(BuildContext context, AuthViewModel vm) {
+    final user = vm.currentUser;
+    if (user != null && !user.hasCompletedSetup) {
+      context.go(AppRoutes.setup);
+    } else {
+      context.go(AppRoutes.home);
     }
   }
 

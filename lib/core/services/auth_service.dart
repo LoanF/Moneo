@@ -82,7 +82,7 @@ class AuthService implements IAuthService {
         '/auth/login',
         data: {
           'email': email.trim().toLowerCase(),
-          'password': password.trim(),
+          'password': password,
         },
       );
 
@@ -101,6 +101,9 @@ class AuthService implements IAuthService {
     try {
       await _ensureGoogleSignInInitialized();
 
+      // Toujours partir d'un état propre pour éviter les erreurs de reauth
+      await _googleSignIn.signOut().catchError((_) {});
+
       final GoogleSignInAccount account = await _googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
       );
@@ -118,6 +121,12 @@ class AuthService implements IAuthService {
       );
 
       await _handleAuthResponse(response.data);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw 'Connexion Google annulée';
+      }
+      if (kDebugMode) print('Google Sign-In error: $e');
+      throw 'Erreur de connexion Google';
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map) {
@@ -138,7 +147,7 @@ class AuthService implements IAuthService {
         data: {
           'username': username.trim(),
           'email': email.trim().toLowerCase(),
-          'password': password.trim(),
+          'password': password,
         },
       );
 
@@ -175,10 +184,18 @@ class AuthService implements IAuthService {
     // On émet l'user tel qu'il est réellement en DB après createUser,
     // ce qui préserve hasCompletedSetup si l'user existait déjà
     var user = _appUserService.currentAppUser ?? apiUser;
-    user = await _appUserService.updateFcmToken(user);
 
+    try {
+      user = await _appUserService.updateFcmToken(user);
+    } catch (e) {
+      if (kDebugMode) print('updateFcmToken failed (non-blocking): $e');
+    }
+
+    // Non-bloquant : ne doit pas empêcher la connexion en cas d'erreur réseau
     final syncService = getIt<SyncService>();
-    await syncService.bootstrapData();
+    syncService.bootstrapData().catchError((e) {
+      if (kDebugMode) print('bootstrapData failed (non-blocking): $e');
+    });
     syncService.startSync();
 
     _authStreamController.add(user);

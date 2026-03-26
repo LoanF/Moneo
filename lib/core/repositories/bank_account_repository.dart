@@ -29,7 +29,7 @@ class BankAccountRepository {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
       }
-    } catch (e) {}
+    } catch (_) {}
   }
 
   Future<void> updateAccount(String id, BankAccountsCompanion entry) async {

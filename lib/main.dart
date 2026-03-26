@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'core/di.dart';
 import 'core/notifiers/auth_notifier.dart';
 import 'core/routes/app_router.dart';
+import 'core/services/sync_service.dart';
 import 'core/themes/app_theme.dart';
 import 'firebase_options.dart';
 import 'presentation/view_models/auth_view_model.dart';
@@ -50,8 +51,32 @@ void main() async {
   );
 }
 
-class Moneo extends StatelessWidget {
+class Moneo extends StatefulWidget {
   const Moneo({super.key});
+
+  @override
+  State<Moneo> createState() => _MoneoState();
+}
+
+class _MoneoState extends State<Moneo> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      getIt<SyncService>().resumeSync();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

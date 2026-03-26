@@ -121,7 +121,7 @@ class _SetupPageState extends State<SetupPage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _accounts.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) => Card(
               color: AppColors.secondaryBackground,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -169,7 +169,7 @@ class _SetupPageState extends State<SetupPage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _paymentMethods.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final method = _paymentMethods[index];
               return Container(
