@@ -1,4 +1,5 @@
 ﻿import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:moneo/data/constants/assets.dart';
 
@@ -12,8 +13,6 @@ class ApiClient {
         String? token = await storage.read(key: 'accessToken');
         options.headers['Authorization'] = 'Bearer $token';
 
-        options.headers['ngrok-skip-browser-warning'] = 'true'; // TODO: Supprimer plus tard
-        
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
@@ -37,9 +36,11 @@ class ApiClient {
       },
     ));
 
-    dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-    ));
+    if (kDebugMode) {
+      dio.interceptors.add(LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+      ));
+    }
   }
 }

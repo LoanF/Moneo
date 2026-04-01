@@ -98,6 +98,7 @@ class Users extends Table {
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get fcmToken => text().nullable()();
   BoolColumn get hasCompletedSetup => boolean().withDefault(const Constant(false))();
+  BoolColumn get emailVerified => boolean().withDefault(const Constant(false))();
 
   TextColumn get paymentMethods => text().map(const PaymentMethodsConverter()).nullable()();
 
@@ -110,7 +111,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -125,6 +126,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.createTable(paymentMethods);
+      }
+      if (from < 5) {
+        await m.addColumn(users, users.emailVerified);
       }
     },
   );

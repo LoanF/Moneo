@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/di.dart';
 import '../../core/database/app_database.dart';
+import '../../core/notifiers/lock_notifier.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
 import '../../core/utils/fake_data_generator.dart';
@@ -16,6 +17,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<AuthViewModel>();
+    final lockNotifier = context.watch<LockNotifier>();
     final user = viewModel.currentUser;
 
     return Scaffold(
@@ -120,7 +122,7 @@ class SettingsPage extends StatelessWidget {
                 label: "Notifications",
                 icon: Icons.notifications_active_rounded,
                 iconColor: Colors.purple,
-                onTap: () {},
+                onTap: () => context.push(AppRoutes.notificationsSettings),
               ),
               _buildNavigationItem(
                 label: "Apparence",
@@ -150,6 +152,20 @@ class SettingsPage extends StatelessWidget {
 
             _buildSectionHeader("Sécurité"),
             _buildSettingsGroup([
+              _buildSwitchItem(
+                label: "Déverrouillage biométrique",
+                icon: Icons.fingerprint_rounded,
+                iconColor: Colors.indigo,
+                value: lockNotifier.biometricEnabled,
+                onChanged: (value) => _toggleBiometric(context, lockNotifier, value),
+              ),
+              if (lockNotifier.biometricEnabled)
+                _buildNavigationItem(
+                  label: "Verrouillage auto : ${_formatTimeout(lockNotifier.autoLockMinutes)}",
+                  icon: Icons.timer_rounded,
+                  iconColor: Colors.blueGrey,
+                  onTap: () => _showTimeoutPicker(context, lockNotifier),
+                ),
               _buildNavigationItem(
                 label: "Se déconnecter",
                 icon: Icons.power_settings_new_rounded,
@@ -200,6 +216,39 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildSwitchItem({
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor, size: 22),
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppColors.mainText,
+        ),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: AppColors.mainColor,
+      ),
+    );
+  }
+
   Widget _buildNavigationItem({
     required String label,
     required IconData icon,
@@ -230,6 +279,57 @@ class SettingsPage extends StatelessWidget {
           ? const Icon(Icons.chevron_right, size: 20, color: AppColors.grey1)
           : null,
     );
+  }
+
+  String _formatTimeout(int minutes) {
+    if (minutes == 0) return 'Jamais';
+    if (minutes == 1) return '1 minute';
+    return '$minutes minutes';
+  }
+
+  Future<void> _toggleBiometric(BuildContext context, LockNotifier lockNotifier, bool value) async {
+    final success = await lockNotifier.setBiometricEnabled(value);
+    if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(value
+              ? 'Biométrie non disponible ou authentification refusée'
+              : 'Impossible de désactiver la biométrie'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  void _showTimeoutPicker(BuildContext context, LockNotifier lockNotifier) {
+    const options = [0, 1, 5, 15, 30];
+    showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.secondaryBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Verrouillage automatique', style: TextStyle(color: AppColors.mainText)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((minutes) {
+            final selected = lockNotifier.autoLockMinutes == minutes;
+            return ListTile(
+              title: Text(
+                _formatTimeout(minutes),
+                style: TextStyle(
+                  color: selected ? AppColors.mainColor : AppColors.mainText,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                ),
+              ),
+              trailing: selected ? const Icon(Icons.check_rounded, color: AppColors.mainColor) : null,
+              onTap: () => Navigator.pop(ctx, minutes),
+            );
+          }).toList(),
+        ),
+      ),
+    ).then((minutes) {
+      if (minutes != null) lockNotifier.setAutoLockMinutes(minutes);
+    });
   }
 
   void _showLogoutDialog(BuildContext context, AuthViewModel viewModel) {

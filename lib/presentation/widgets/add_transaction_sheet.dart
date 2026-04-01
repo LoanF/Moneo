@@ -436,6 +436,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         if (widget.transaction != null) {
           await homeViewModel.updateTransaction(widget.transaction!.copyWith(
             amount: finalAmount,
+            type: _isExpense ? 'expense' : 'income',
             note: Value(_titleController.text),
             categoryId: Value(finalCategoryId),
             date: _selectedDate,

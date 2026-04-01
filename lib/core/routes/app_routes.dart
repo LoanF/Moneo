@@ -9,4 +9,7 @@ class AppRoutes {
   static const String accountsManager = '/accountsManager';
   static const String monthlyOperations = '/monthlyOperations';
   static const String stats = '/stats';
+  static const String forgotPassword = '/forgot-password';
+  static const String verifyEmail = '/verify-email';
+  static const String notificationsSettings = '/notifications-settings';
 }

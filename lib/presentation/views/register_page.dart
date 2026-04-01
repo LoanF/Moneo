@@ -248,7 +248,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _navigateAfterAuth(BuildContext context, AuthViewModel vm) {
     final user = vm.currentUser;
-    if (user != null && !user.hasCompletedSetup) {
+    if (user != null && !user.emailVerified) {
+      context.go(AppRoutes.verifyEmail);
+    } else if (user != null && !user.hasCompletedSetup) {
       context.go(AppRoutes.setup);
     } else {
       context.go(AppRoutes.home);

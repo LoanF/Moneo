@@ -66,7 +66,7 @@ class _LoginPageState extends State<LoginPage> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () => context.push(AppRoutes.forgotPassword),
                       child: const Text(
                         "Mot de passe oublié ?",
                         style: TextStyle(color: AppColors.linkAction, fontSize: 13),
@@ -230,7 +230,9 @@ class _LoginPageState extends State<LoginPage> {
 
   void _navigateAfterAuth(BuildContext context, AuthViewModel vm) {
     final user = vm.currentUser;
-    if (user != null && !user.hasCompletedSetup) {
+    if (user != null && !user.emailVerified) {
+      context.go(AppRoutes.verifyEmail);
+    } else if (user != null && !user.hasCompletedSetup) {
       context.go(AppRoutes.setup);
     } else {
       context.go(AppRoutes.home);

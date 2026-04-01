@@ -70,6 +70,62 @@ class AuthViewModel extends CommonViewModel {
     await _authService.signOut();
   }
 
+  Future<bool> forgotPassword(String email) async {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      await _authService.forgotPassword(email);
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword(String email, String code, String newPassword) async {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      await _authService.resetPassword(email, code, newPassword);
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  Future<bool> verifyEmail(String code) async {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      await _authService.verifyEmail(code);
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  Future<bool> resendVerification() async {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      await _authService.resendVerification();
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
   Future<bool> updateProfile({
     required String newName,
     File? newImageFile,

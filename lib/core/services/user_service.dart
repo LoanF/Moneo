@@ -9,6 +9,9 @@ abstract class IAppUserService {
   Future<void> updateUser(AppUser user);
   Future<AppUser> updateFcmToken(AppUser appUser);
   Future<AppUser?> loadCurrentUser();
+  Future<void> clearUser();
+  Future<void> setEmailVerified(String userId);
+  Future<AppUser> updateNotificationPrefs(Map<String, bool> prefs);
   AppUser? get currentAppUser;
 }
 
@@ -33,6 +36,7 @@ class AppUserService implements IAppUserService {
         updatedAt: user.updatedAt,
         fcmToken: Value(user.fcmToken),
         hasCompletedSetup: Value(user.hasCompletedSetup),
+        emailVerified: Value(user.emailVerified),
         paymentMethods: Value(user.paymentMethods),
       ),
       onConflict: DoUpdate((_) => UsersCompanion(
@@ -41,9 +45,12 @@ class AppUserService implements IAppUserService {
         photoUrl: Value(user.photoUrl),
         updatedAt: Value(user.updatedAt),
         fcmToken: Value(user.fcmToken),
+        emailVerified: Value(user.emailVerified),
+        hasCompletedSetup: Value(user.hasCompletedSetup),
       )),
     );
-    _currentAppUser = await loadCurrentUser() ?? user;
+    final row = await (_db.select(_db.users)..where((t) => t.id.equals(user.uid))).getSingleOrNull();
+    _currentAppUser = row != null ? AppUser.fromDb(row) : user;
   }
 
   @override
@@ -61,11 +68,13 @@ class AppUserService implements IAppUserService {
         // On fait confiance aux valeurs locales pour ces champs critiques,
         // car le serveur peut ne pas les retourner correctement
         hasCompletedSetup: Value(user.hasCompletedSetup),
+        emailVerified: Value(user.emailVerified),
         paymentMethods: Value(user.paymentMethods),
       ),
     );
     _currentAppUser = serverUser.copyWith(
       hasCompletedSetup: user.hasCompletedSetup,
+      emailVerified: user.emailVerified,
       paymentMethods: user.paymentMethods,
     );
   }
@@ -79,6 +88,20 @@ class AppUserService implements IAppUserService {
   }
 
   @override
+  Future<void> clearUser() async {
+    await _db.delete(_db.users).go();
+    _currentAppUser = null;
+  }
+
+  @override
+  Future<void> setEmailVerified(String userId) async {
+    await (_db.update(_db.users)..where((t) => t.id.equals(userId))).write(
+      const UsersCompanion(emailVerified: Value(true)),
+    );
+    _currentAppUser = _currentAppUser?.copyWith(emailVerified: true);
+  }
+
+  @override
   Future<AppUser> updateFcmToken(AppUser appUser) async {
     final fcmToken = await _firebaseMessaging.getToken();
     if (fcmToken == null) return appUser;
@@ -89,6 +112,15 @@ class AppUserService implements IAppUserService {
     await (_db.update(_db.users)..where((t) => t.id.equals(appUser.uid))).write(
       UsersCompanion(fcmToken: Value(fcmToken)),
     );
+    _currentAppUser = updated;
+    return updated;
+  }
+
+  @override
+  Future<AppUser> updateNotificationPrefs(Map<String, bool> prefs) async {
+    final current = _currentAppUser!;
+    await _apiClient.dio.patch('/auth/profile', data: {'notificationPrefs': prefs});
+    final updated = current.copyWith(notificationPrefs: prefs);
     _currentAppUser = updated;
     return updated;
   }

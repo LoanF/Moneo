@@ -7,6 +7,8 @@ import 'package:moneo/core/services/sync_service.dart';
 import 'package:moneo/data/constants/assets.dart';
 import 'package:moneo/data/models/app_user_model.dart';
 import '../di.dart';
+import '../interceptor/api_client.dart';
+import '../notifiers/lock_notifier.dart';
 import 'user_service.dart';
 
 abstract class IAuthService {
@@ -20,6 +22,14 @@ abstract class IAuthService {
 
   Future<void> register(String username, String email, String password);
 
+  Future<void> forgotPassword(String email);
+
+  Future<void> resetPassword(String email, String code, String newPassword);
+
+  Future<void> verifyEmail(String code);
+
+  Future<void> resendVerification();
+
   AppUser? get currentUser;
 
   void dispose();
@@ -32,7 +42,6 @@ class AuthService implements IAuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  // Stocke le Future d'initialisation pour éviter les appels parallèles
   Future<void>? _googleSignInInitFuture;
 
   final _authStreamController = StreamController<AppUser?>.broadcast();
@@ -51,7 +60,6 @@ class AuthService implements IAuthService {
       if (kDebugMode) {
         print('Failed to initialize Google Sign-In: $e');
       }
-      // Réinitialiser pour permettre une nouvelle tentative
       _googleSignInInitFuture = null;
     }
   }
@@ -64,8 +72,21 @@ class AuthService implements IAuthService {
   Future<void> _checkInitialAuth() async {
     final token = await _storage.read(key: 'accessToken');
     if (token != null) {
-      // Charge l'utilisateur depuis la DB locale au lieu du cache mémoire vide
-      final user = await _appUserService.loadCurrentUser();
+      var user = await _appUserService.loadCurrentUser();
+      if (user == null) {
+        try {
+          final response = await getIt<ApiClient>().dio.get('/auth/me');
+          final apiUser = AppUser.fromJson(response.data);
+          await _appUserService.createUser(apiUser);
+          user = _appUserService.currentAppUser;
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+            await _storage.deleteAll();
+          }
+        } catch (_) {
+          await _storage.deleteAll();
+        }
+      }
       _authStreamController.add(user);
     } else {
       _authStreamController.add(null);
@@ -80,10 +101,7 @@ class AuthService implements IAuthService {
     try {
       final response = await _dio.post(
         '/auth/login',
-        data: {
-          'email': email.trim().toLowerCase(),
-          'password': password,
-        },
+        data: {'email': email.trim().toLowerCase(), 'password': password},
       );
 
       await _handleAuthResponse(response.data);
@@ -101,7 +119,6 @@ class AuthService implements IAuthService {
     try {
       await _ensureGoogleSignInInitialized();
 
-      // Toujours partir d'un état propre pour éviter les erreurs de reauth
       await _googleSignIn.signOut().catchError((_) {});
 
       final GoogleSignInAccount account = await _googleSignIn.authenticate(
@@ -157,7 +174,9 @@ class AuthService implements IAuthService {
       if (data is Map) {
         if (data['errors'] is List && (data['errors'] as List).isNotEmpty) {
           final firstError = (data['errors'] as List)[0];
-          throw firstError is Map ? (firstError['msg'] ?? 'Erreur') : firstError.toString();
+          throw firstError is Map
+              ? (firstError['msg'] ?? 'Erreur')
+              : firstError.toString();
         }
         if (data['error'] != null) {
           throw data['error'];
@@ -181,8 +200,6 @@ class AuthService implements IAuthService {
     final apiUser = AppUser.fromJson(data['user'] ?? {});
     await _appUserService.createUser(apiUser);
 
-    // On émet l'user tel qu'il est réellement en DB après createUser,
-    // ce qui préserve hasCompletedSetup si l'user existait déjà
     var user = _appUserService.currentAppUser ?? apiUser;
 
     try {
@@ -191,7 +208,8 @@ class AuthService implements IAuthService {
       if (kDebugMode) print('updateFcmToken failed (non-blocking): $e');
     }
 
-    // Non-bloquant : ne doit pas empêcher la connexion en cas d'erreur réseau
+    getIt<LockNotifier>().unlock();
+
     final syncService = getIt<SyncService>();
     syncService.bootstrapData().catchError((e) {
       if (kDebugMode) print('bootstrapData failed (non-blocking): $e');
@@ -202,9 +220,76 @@ class AuthService implements IAuthService {
   }
 
   @override
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _dio.post(
+        '/auth/forgot-password',
+        data: {'email': email.trim().toLowerCase()},
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) throw data['error'] ?? 'Erreur lors de la demande';
+      throw 'Erreur lors de la demande';
+    }
+  }
+
+  @override
+  Future<void> resetPassword(
+    String email,
+    String code,
+    String newPassword,
+  ) async {
+    try {
+      await _dio.post(
+        '/auth/reset-password',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'code': code,
+          'newPassword': newPassword,
+        },
+      );
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) throw data['error'] ?? 'Code invalide ou expiré';
+      throw 'Code invalide ou expiré';
+    }
+  }
+
+  @override
+  Future<void> verifyEmail(String code) async {
+    try {
+      await getIt<ApiClient>().dio.post(
+        '/auth/verify-email',
+        data: {'code': code},
+      );
+      final user = _appUserService.currentAppUser;
+      if (user != null) {
+        await _appUserService.setEmailVerified(user.uid);
+        _authStreamController.add(_appUserService.currentAppUser);
+      }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) throw data['error'] ?? 'Code invalide';
+      throw 'Code invalide';
+    }
+  }
+
+  @override
+  Future<void> resendVerification() async {
+    try {
+      await getIt<ApiClient>().dio.post('/auth/resend-verification');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) throw data['error'] ?? 'Erreur lors du renvoi';
+      throw 'Erreur lors du renvoi';
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     getIt<SyncService>().stopSync();
     await _storage.deleteAll();
+    await _appUserService.clearUser();
     try {
       await _googleSignIn.signOut();
     } catch (_) {}

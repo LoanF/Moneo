@@ -13,13 +13,17 @@ import '../presentation/view_models/stats_view_model.dart';
 import 'database/app_database.dart';
 import 'interceptor/api_client.dart';
 import 'notifiers/auth_notifier.dart';
+import 'notifiers/lock_notifier.dart';
 import 'services/auth_service.dart';
+import 'services/biometric_service.dart';
 
 final getIt = GetIt.instance;
 
 void configureDependencies() {
   getIt.registerSingleton<AppDatabase>(AppDatabase());
   getIt.registerSingleton<ApiClient>(ApiClient());
+  getIt.registerSingleton<BiometricService>(BiometricService());
+  getIt.registerSingleton<LockNotifier>(LockNotifier(getIt<BiometricService>()));
 
   getIt.registerLazySingleton<IAppUserService>(() => AppUserService(getIt<AppDatabase>(), getIt<ApiClient>()));
   getIt.registerLazySingleton(() => TransactionRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
