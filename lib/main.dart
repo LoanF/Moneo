@@ -12,7 +12,6 @@ import 'core/di.dart';
 import 'core/notifiers/auth_notifier.dart';
 import 'core/notifiers/lock_notifier.dart';
 import 'core/routes/app_router.dart';
-import 'core/services/sync_service.dart';
 import 'core/themes/app_theme.dart';
 import 'firebase_options.dart';
 import 'presentation/view_models/auth_view_model.dart';
@@ -94,7 +93,6 @@ class _MoneoState extends State<Moneo> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused) {
       _lastBackgroundTime = DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
-      getIt<SyncService>().resumeSync();
       getIt<LockNotifier>().checkAutoLock(_lastBackgroundTime);
       _lastBackgroundTime = null;
     }

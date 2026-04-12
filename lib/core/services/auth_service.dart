@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:moneo/core/services/sync_service.dart';
 import 'package:moneo/data/constants/assets.dart';
 import 'package:moneo/data/models/app_user_model.dart';
 import '../di.dart';
@@ -13,25 +12,15 @@ import 'user_service.dart';
 
 abstract class IAuthService {
   Stream<AppUser?> get authStateChanges;
-
   Future<void> signInWithEmail(String email, String password);
-
   Future<void> signInWithGoogle();
-
   Future<void> signOut();
-
   Future<void> register(String username, String email, String password);
-
   Future<void> forgotPassword(String email);
-
   Future<void> resetPassword(String email, String code, String newPassword);
-
   Future<void> verifyEmail(String code);
-
   Future<void> resendVerification();
-
   AppUser? get currentUser;
-
   void dispose();
 }
 
@@ -39,11 +28,9 @@ class AuthService implements IAuthService {
   final Dio _dio = Dio(BaseOptions(baseUrl: AppAssets.apiUrl));
   final _storage = const FlutterSecureStorage();
   final IAppUserService _appUserService;
-
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   Future<void>? _googleSignInInitFuture;
-
   final _authStreamController = StreamController<AppUser?>.broadcast();
 
   AuthService(this._appUserService) {
@@ -53,13 +40,9 @@ class AuthService implements IAuthService {
 
   Future<void> _initializeGoogleSignIn() async {
     try {
-      await _googleSignIn.initialize(
-        serverClientId: AppAssets.googleServerClientId,
-      );
+      await _googleSignIn.initialize(serverClientId: AppAssets.googleServerClientId);
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to initialize Google Sign-In: $e');
-      }
+      if (kDebugMode) print('Failed to initialize Google Sign-In: $e');
       _googleSignInInitFuture = null;
     }
   }
@@ -72,22 +55,23 @@ class AuthService implements IAuthService {
   Future<void> _checkInitialAuth() async {
     final token = await _storage.read(key: 'accessToken');
     if (token != null) {
-      var user = await _appUserService.loadCurrentUser();
-      if (user == null) {
+      try {
+        final response = await getIt<ApiClient>().dio.get('/auth/me');
+        final apiUser = AppUser.fromJson(response.data);
+        await _appUserService.createUser(apiUser);
         try {
-          final response = await getIt<ApiClient>().dio.get('/auth/me');
-          final apiUser = AppUser.fromJson(response.data);
-          await _appUserService.createUser(apiUser);
-          user = _appUserService.currentAppUser;
-        } on DioException catch (e) {
-          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-            await _storage.deleteAll();
-          }
-        } catch (_) {
+          await _appUserService.updateFcmToken(apiUser);
+        } catch (_) {}
+        _authStreamController.add(_appUserService.currentAppUser ?? apiUser);
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
           await _storage.deleteAll();
         }
+        _authStreamController.add(null);
+      } catch (_) {
+        await _storage.deleteAll();
+        _authStreamController.add(null);
       }
-      _authStreamController.add(user);
     } else {
       _authStreamController.add(null);
     }
@@ -103,13 +87,10 @@ class AuthService implements IAuthService {
         '/auth/login',
         data: {'email': email.trim().toLowerCase(), 'password': password},
       );
-
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       final data = e.response?.data;
-      if (data is Map) {
-        throw data['error'] ?? 'Erreur de connexion';
-      }
+      if (data is Map) throw data['error'] ?? 'Erreur de connexion';
       throw 'Erreur de connexion';
     }
   }
@@ -118,37 +99,19 @@ class AuthService implements IAuthService {
   Future<void> signInWithGoogle() async {
     try {
       await _ensureGoogleSignInInitialized();
-
       await _googleSignIn.signOut().catchError((_) {});
-
-      final GoogleSignInAccount account = await _googleSignIn.authenticate(
-        scopeHint: ['email', 'profile'],
-      );
-
+      final GoogleSignInAccount account = await _googleSignIn.authenticate(scopeHint: ['email', 'profile']);
       final GoogleSignInAuthentication auth = account.authentication;
       final String? idToken = auth.idToken;
-
-      if (idToken == null) {
-        throw 'ID Token introuvable';
-      }
-
-      final response = await _dio.post(
-        '/auth/google',
-        data: {'idToken': idToken},
-      );
-
+      if (idToken == null) throw 'ID Token introuvable';
+      final response = await _dio.post('/auth/google', data: {'idToken': idToken});
       await _handleAuthResponse(response.data);
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw 'Connexion Google annulée';
-      }
-      if (kDebugMode) print('Google Sign-In error: $e');
+      if (e.code == GoogleSignInExceptionCode.canceled) throw 'Connexion Google annulée';
       throw 'Erreur de connexion Google';
     } on DioException catch (e) {
       final data = e.response?.data;
-      if (data is Map) {
-        throw data['error'] ?? 'Erreur de connexion Google';
-      }
+      if (data is Map) throw data['error'] ?? 'Erreur de connexion Google';
       throw 'Erreur de connexion Google';
     } catch (e) {
       if (kDebugMode) print('Google Sign-In error: $e');
@@ -159,28 +122,20 @@ class AuthService implements IAuthService {
   @override
   Future<void> register(String username, String email, String password) async {
     try {
-      final response = await _dio.post(
-        '/auth/register',
-        data: {
-          'username': username.trim(),
-          'email': email.trim().toLowerCase(),
-          'password': password,
-        },
-      );
-
+      final response = await _dio.post('/auth/register', data: {
+        'username': username.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      });
       await _handleAuthResponse(response.data);
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map) {
         if (data['errors'] is List && (data['errors'] as List).isNotEmpty) {
           final firstError = (data['errors'] as List)[0];
-          throw firstError is Map
-              ? (firstError['msg'] ?? 'Erreur')
-              : firstError.toString();
+          throw firstError is Map ? (firstError['msg'] ?? 'Erreur') : firstError.toString();
         }
-        if (data['error'] != null) {
-          throw data['error'];
-        }
+        if (data['error'] != null) throw data['error'];
       }
       throw 'Une erreur réseau est survenue.';
     }
@@ -189,10 +144,7 @@ class AuthService implements IAuthService {
   Future<void> _handleAuthResponse(dynamic data) async {
     final accessToken = data['accessToken'];
     final refreshToken = data['refreshToken'];
-
-    if (accessToken == null || refreshToken == null) {
-      throw 'Réponse serveur invalide : tokens manquants';
-    }
+    if (accessToken == null || refreshToken == null) throw 'Réponse serveur invalide : tokens manquants';
 
     await _storage.write(key: 'accessToken', value: accessToken as String);
     await _storage.write(key: 'refreshToken', value: refreshToken as String);
@@ -201,7 +153,6 @@ class AuthService implements IAuthService {
     await _appUserService.createUser(apiUser);
 
     var user = _appUserService.currentAppUser ?? apiUser;
-
     try {
       user = await _appUserService.updateFcmToken(user);
     } catch (e) {
@@ -209,23 +160,13 @@ class AuthService implements IAuthService {
     }
 
     getIt<LockNotifier>().unlock();
-
-    final syncService = getIt<SyncService>();
-    syncService.bootstrapData().catchError((e) {
-      if (kDebugMode) print('bootstrapData failed (non-blocking): $e');
-    });
-    syncService.startSync();
-
     _authStreamController.add(user);
   }
 
   @override
   Future<void> forgotPassword(String email) async {
     try {
-      await _dio.post(
-        '/auth/forgot-password',
-        data: {'email': email.trim().toLowerCase()},
-      );
+      await _dio.post('/auth/forgot-password', data: {'email': email.trim().toLowerCase()});
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map) throw data['error'] ?? 'Erreur lors de la demande';
@@ -234,20 +175,13 @@ class AuthService implements IAuthService {
   }
 
   @override
-  Future<void> resetPassword(
-    String email,
-    String code,
-    String newPassword,
-  ) async {
+  Future<void> resetPassword(String email, String code, String newPassword) async {
     try {
-      await _dio.post(
-        '/auth/reset-password',
-        data: {
-          'email': email.trim().toLowerCase(),
-          'code': code,
-          'newPassword': newPassword,
-        },
-      );
+      await _dio.post('/auth/reset-password', data: {
+        'email': email.trim().toLowerCase(),
+        'code': code,
+        'newPassword': newPassword,
+      });
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map) throw data['error'] ?? 'Code invalide ou expiré';
@@ -258,10 +192,7 @@ class AuthService implements IAuthService {
   @override
   Future<void> verifyEmail(String code) async {
     try {
-      await getIt<ApiClient>().dio.post(
-        '/auth/verify-email',
-        data: {'code': code},
-      );
+      await getIt<ApiClient>().dio.post('/auth/verify-email', data: {'code': code});
       final user = _appUserService.currentAppUser;
       if (user != null) {
         await _appUserService.setEmailVerified(user.uid);
@@ -287,7 +218,6 @@ class AuthService implements IAuthService {
 
   @override
   Future<void> signOut() async {
-    getIt<SyncService>().stopSync();
     await _storage.deleteAll();
     await _appUserService.clearUser();
     try {

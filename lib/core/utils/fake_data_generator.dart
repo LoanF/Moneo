@@ -1,22 +1,24 @@
 import 'dart:math';
-import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
-import '../database/app_database.dart';
+import '../di.dart';
+import '../repositories/bank_account_repository.dart';
+import '../repositories/category_repository.dart';
+import '../repositories/transaction_repository.dart';
+import '../../data/models/models.dart';
 
 class FakeDataGenerator {
-  final AppDatabase _db;
+  final BankAccountRepository _accountRepo = getIt<BankAccountRepository>();
+  final CategoryRepository _categoryRepo = getIt<CategoryRepository>();
+  final TransactionRepository _transactionRepo = getIt<TransactionRepository>();
   final _uuid = const Uuid();
   final _rng = Random();
 
-  FakeDataGenerator(this._db);
-
   Future<void> generate() async {
-    final accounts = await _db.select(_db.bankAccounts).get();
-    final categories = await _db.select(_db.categories).get();
+    final accounts = await _accountRepo.fetchAccounts();
+    final categories = await _categoryRepo.fetchCategories();
 
     if (accounts.isEmpty) return;
 
-    // Catégories par type (dépenses vs revenus par nom)
     final expenseCategories = categories
         .where((c) => c.parentId == null)
         .where((c) => !['Salaire', 'Épargne'].contains(c.name))
@@ -28,16 +30,14 @@ class FakeDataGenerator {
     final allExpenseCats = [...expenseCategories, ...subCategories];
 
     final now = DateTime.now();
-    final toInsert = <TransactionsCompanion>[];
+    final toInsert = <Transaction>[];
 
     for (int monthOffset = 5; monthOffset >= 0; monthOffset--) {
       final month = DateTime(now.year, now.month - monthOffset);
-      final daysInMonth =
-          DateTime(month.year, month.month + 1, 0).day;
+      final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
       final isCurrentMonth = monthOffset == 0;
       final maxDay = isCurrentMonth ? now.day : daysInMonth;
 
-      // ── Revenus (1-2 par mois) ──────────────────────────────────────
       final salaire = 1800 + _rng.nextInt(600);
       final salaryAccount = accounts[_rng.nextInt(accounts.length)];
       final salaryCat = incomeCategories.isNotEmpty
@@ -66,7 +66,6 @@ class FakeDataGenerator {
         ));
       }
 
-      // ── Dépenses (10-18 par mois) ───────────────────────────────────
       final nbExpenses = 10 + _rng.nextInt(9);
       for (int i = 0; i < nbExpenses; i++) {
         final account = accounts[_rng.nextInt(accounts.length)];
@@ -87,19 +86,21 @@ class FakeDataGenerator {
       }
     }
 
-    // Insertion en batch (local seulement, sans API)
-    await _db.batch((batch) {
-      batch.insertAll(_db.transactions, toInsert, mode: InsertMode.insertOrIgnore);
-    });
+    for (final tx in toInsert) {
+      await _transactionRepo.addTransaction(tx);
+    }
   }
 
   Future<void> clear() async {
-    await _db.delete(_db.transactions).go();
+    final transactions = await _transactionRepo.fetchTransactions(limit: 10000);
+    for (final tx in transactions) {
+      await _transactionRepo.deleteTransaction(tx.id);
+    }
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
-  TransactionsCompanion _tx({
+  Transaction _tx({
     required String accountId,
     required double amount,
     required String type,
@@ -107,13 +108,13 @@ class FakeDataGenerator {
     required DateTime date,
     String? categoryId,
   }) {
-    return TransactionsCompanion.insert(
+    return Transaction(
       id: _uuid.v4(),
       amount: amount,
       type: type,
       accountId: accountId,
-      note: Value(note),
-      categoryId: Value(categoryId),
+      note: note,
+      categoryId: categoryId,
       date: date,
     );
   }
@@ -158,8 +159,6 @@ class FakeDataGenerator {
     ];
     return names[month];
   }
-
-  // ─── Listes de libellés ────────────────────────────────────────────────────
 
   static const _alimentation = ['Supermarché', 'Boulangerie', 'Marché', 'Épicerie'];
   static const _courses = ['Carrefour', 'Leclerc', 'Lidl', 'Auchan', 'Intermarché', 'Monoprix'];

@@ -4,13 +4,10 @@ import 'package:moneo/core/repositories/category_repository.dart';
 import 'package:moneo/core/repositories/monthly_payment_repository.dart';
 import 'package:moneo/core/repositories/payment_method_repository.dart';
 import 'package:moneo/core/repositories/transaction_repository.dart';
-import 'package:moneo/core/services/monthly_processor.dart';
-import 'package:moneo/core/services/sync_service.dart';
 import '../core/services/user_service.dart';
 import '../presentation/view_models/home_view_model.dart';
 import '../presentation/view_models/auth_view_model.dart';
 import '../presentation/view_models/stats_view_model.dart';
-import 'database/app_database.dart';
 import 'interceptor/api_client.dart';
 import 'notifiers/auth_notifier.dart';
 import 'notifiers/lock_notifier.dart';
@@ -20,18 +17,16 @@ import 'services/biometric_service.dart';
 final getIt = GetIt.instance;
 
 void configureDependencies() {
-  getIt.registerSingleton<AppDatabase>(AppDatabase());
   getIt.registerSingleton<ApiClient>(ApiClient());
   getIt.registerSingleton<BiometricService>(BiometricService());
   getIt.registerSingleton<LockNotifier>(LockNotifier(getIt<BiometricService>()));
 
-  getIt.registerLazySingleton<IAppUserService>(() => AppUserService(getIt<AppDatabase>(), getIt<ApiClient>()));
-  getIt.registerLazySingleton(() => TransactionRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
-  getIt.registerLazySingleton(() => BankAccountRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
-  getIt.registerLazySingleton(() => CategoryRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
-  getIt.registerLazySingleton(() => MonthlyPaymentRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
-  getIt.registerLazySingleton(() => PaymentMethodRepository(getIt<AppDatabase>(), getIt<ApiClient>()));
-  getIt.registerLazySingleton(() => MonthlyProcessor(getIt<AppDatabase>(), getIt<TransactionRepository>()));
+  getIt.registerLazySingleton<IAppUserService>(() => AppUserService(getIt<ApiClient>()));
+  getIt.registerLazySingleton(() => TransactionRepository(getIt<ApiClient>()));
+  getIt.registerLazySingleton(() => BankAccountRepository(getIt<ApiClient>()));
+  getIt.registerLazySingleton(() => CategoryRepository(getIt<ApiClient>()));
+  getIt.registerLazySingleton(() => MonthlyPaymentRepository(getIt<ApiClient>()));
+  getIt.registerLazySingleton(() => PaymentMethodRepository(getIt<ApiClient>()));
 
   getIt.registerLazySingleton<IAuthService>(() => AuthService(getIt<IAppUserService>()));
 
@@ -41,10 +36,8 @@ void configureDependencies() {
     getIt<BankAccountRepository>(),
     getIt<CategoryRepository>(),
     getIt<MonthlyPaymentRepository>(),
-    getIt<MonthlyProcessor>(),
   ));
-  
-  getIt.registerSingleton<StatsViewModel>(StatsViewModel(getIt<AppDatabase>()));
+
+  getIt.registerSingleton<StatsViewModel>(StatsViewModel(getIt<TransactionRepository>(), getIt<CategoryRepository>()));
   getIt.registerSingleton<AuthNotifier>(AuthNotifier(getIt<IAuthService>()));
-  getIt.registerLazySingleton(() => SyncService(getIt<AppDatabase>()));
 }

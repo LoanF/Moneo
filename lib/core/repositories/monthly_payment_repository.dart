@@ -1,37 +1,38 @@
-import 'package:moneo/core/database/app_database.dart';
 import 'package:moneo/core/interceptor/api_client.dart';
-import 'package:drift/drift.dart';
+import 'package:moneo/data/models/models.dart';
 
 class MonthlyPaymentRepository {
-  final AppDatabase _db;
   final ApiClient _api;
 
-  MonthlyPaymentRepository(this._db, this._api);
+  MonthlyPaymentRepository(this._api);
 
-  Stream<List<MonthlyPayment>> watchMonthlyPayments() {
-    return _db.select(_db.monthlyPayments).watch();
+  Future<List<MonthlyPayment>> fetchMonthlyPayments() async {
+    final response = await _api.dio.get('/monthly-payments');
+    return (response.data as List).map((e) => MonthlyPayment.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<void> createMonthlyPayment(MonthlyPaymentsCompanion entry) async {
-    await _db.into(_db.monthlyPayments).insert(entry, mode: InsertMode.insertOrReplace);
-    try {
-      await _api.dio.post('/monthly-payments', data: {
-        'id': entry.id.value,
-        'name': entry.name.value,
-        'amount': entry.amount.value,
-        'type': entry.type.value,
-        'dayOfMonth': entry.dayOfMonth.value,
-        'accountId': entry.accountId.value,
-        'categoryId': entry.categoryId.value,
-      });
-    } catch (_) {}
+  Future<MonthlyPayment> createMonthlyPayment({
+    required String id,
+    required String name,
+    required double amount,
+    required String type,
+    required int dayOfMonth,
+    required String accountId,
+    String? categoryId,
+  }) async {
+    final response = await _api.dio.post('/monthly-payments', data: {
+      'id': id,
+      'name': name,
+      'amount': amount,
+      'type': type,
+      'dayOfMonth': dayOfMonth,
+      'accountId': accountId,
+      'categoryId': categoryId,
+    });
+    return MonthlyPayment.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<void> deleteMonthlyPayment(String id) async {
-    await (_db.delete(_db.monthlyPayments)..where((t) => t.id.equals(id))).go();
-
-    try {
-      await _api.dio.delete('/monthly-payments/$id');
-    } catch (_) {}
+    await _api.dio.delete('/monthly-payments/$id');
   }
 }

@@ -1,12 +1,9 @@
-﻿import 'package:drift/drift.dart' hide Column;
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart' hide Category;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../core/database/app_database.dart';
-import '../../core/di.dart';
 import '../../core/helpers/icon_helper.dart';
-import '../../core/repositories/category_repository.dart';
 import '../../core/themes/app_colors.dart';
+import '../../data/models/models.dart';
 import '../view_models/home_view_model.dart';
 
 class AddTransactionSheet extends StatefulWidget {
@@ -295,41 +292,34 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   Widget _buildCategorySection() {
-    return StreamBuilder<List<Category>>(
-      stream: getIt<CategoryRepository>().watchCategories(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox(height: 150, child: Center(child: CircularProgressIndicator()));
+    final allCats = context.read<HomeViewModel>().categories;
+    final mainCats = allCats.where((c) => c.parentId == null).toList();
+    List<Category> subCats = _selectedParent == null ? [] : allCats.where((c) => c.parentId == _selectedParent!.id).toList();
 
-        final allCats = snapshot.data!;
-        final mainCats = allCats.where((c) => c.parentId == null).toList();
-        List<Category> subCats = _selectedParent == null ? [] : allCats.where((c) => c.parentId == _selectedParent!.id).toList();
+    if (_selectedParent != null && subCats.isNotEmpty) {
+      subCats.add(Category(
+        id: "other_${_selectedParent!.id}",
+        name: "Autre",
+        parentId: _selectedParent!.id,
+        iconCode: _selectedParent!.iconCode,
+        colorValue: _selectedParent!.colorValue,
+        userId: widget.uid,
+      ));
+    }
 
-        if (_selectedParent != null && subCats.isNotEmpty) {
-          subCats.add(Category(
-            id: "other_${_selectedParent!.id}",
-            name: "Autre",
-            parentId: _selectedParent!.id,
-            iconCode: _selectedParent!.iconCode,
-            colorValue: _selectedParent!.colorValue,
-            userId: widget.uid,
-          ));
-        }
-        
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Catégorie principale", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
-            const SizedBox(height: 12),
-            _buildHorizontalCategoryList(mainCats, true),
-            if (subCats.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              const Text("Sous-catégorie", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
-              const SizedBox(height: 12),
-              _buildHorizontalCategoryList(subCats, false),
-            ],
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Catégorie principale", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 12),
+        _buildHorizontalCategoryList(mainCats, true),
+        if (subCats.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const Text("Sous-catégorie", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(height: 12),
+          _buildHorizontalCategoryList(subCats, false),
+        ],
+      ],
     );
   }
 
@@ -437,8 +427,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           await homeViewModel.updateTransaction(widget.transaction!.copyWith(
             amount: finalAmount,
             type: _isExpense ? 'expense' : 'income',
-            note: Value(_titleController.text),
-            categoryId: Value(finalCategoryId),
+            note: _titleController.text,
+            categoryId: finalCategoryId,
             date: _selectedDate,
           ));
         } else {

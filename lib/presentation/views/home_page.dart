@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Category;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/database/app_database.dart';
+import '../../data/models/models.dart';
 import '../../core/extensions/string_extensions.dart';
 import '../../core/notifiers/auth_notifier.dart';
 import '../../core/routes/app_routes.dart';

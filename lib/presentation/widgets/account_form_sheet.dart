@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Category;
 import 'package:flutter/services.dart';
-import '../../core/database/app_database.dart';
+import '../../data/models/models.dart';
 import '../../core/themes/app_colors.dart';
 
 class AccountFormSheet extends StatefulWidget {

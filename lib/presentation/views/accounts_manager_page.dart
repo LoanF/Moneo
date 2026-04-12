@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Category;
 import 'package:provider/provider.dart';
 import '../../core/themes/app_colors.dart';
-import '../../core/database/app_database.dart';
+import '../../data/models/models.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/account_form_sheet.dart';
 

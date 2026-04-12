@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/di.dart';
-import '../../core/database/app_database.dart';
 import '../../core/notifiers/lock_notifier.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
@@ -364,7 +362,7 @@ class SettingsPage extends StatelessWidget {
   }
 
   Future<void> _generateFakeData(BuildContext context) async {
-    final generator = FakeDataGenerator(getIt<AppDatabase>());
+    final generator = FakeDataGenerator();
     await generator.generate();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -392,7 +390,7 @@ class SettingsPage extends StatelessWidget {
       ),
     );
     if (confirm == true) {
-      await FakeDataGenerator(getIt<AppDatabase>()).clear();
+      await FakeDataGenerator().clear();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Transactions supprimées.")),

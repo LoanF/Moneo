@@ -1,6 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart' hide Category;
 import 'package:intl/intl.dart';
-import '../../core/database/app_database.dart';
+import '../../data/models/models.dart';
 import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
 

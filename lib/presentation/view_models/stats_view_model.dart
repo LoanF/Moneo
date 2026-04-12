@@ -1,6 +1,7 @@
-import 'package:drift/drift.dart' hide Column;
-import 'package:flutter/material.dart';
-import '../../core/database/app_database.dart';
+import 'package:flutter/material.dart' hide Category;
+import '../../core/repositories/category_repository.dart';
+import '../../core/repositories/transaction_repository.dart';
+import '../../data/models/models.dart';
 
 class MonthlyStats {
   final DateTime month;
@@ -10,7 +11,8 @@ class MonthlyStats {
 }
 
 class StatsViewModel extends ChangeNotifier {
-  final AppDatabase _db;
+  final TransactionRepository _transactionRepo;
+  final CategoryRepository _categoryRepo;
 
   DateTime _selectedMonth;
   List<Transaction> _allTransactions = [];
@@ -18,7 +20,7 @@ class StatsViewModel extends ChangeNotifier {
   List<Category> _categories = [];
   bool _isLoading = false;
 
-  StatsViewModel(this._db)
+  StatsViewModel(this._transactionRepo, this._categoryRepo)
       : _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   bool get isLoading => _isLoading;
@@ -29,18 +31,15 @@ class StatsViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    _categories = await _db.select(_db.categories).get();
-
-    // Charge 8 mois de données pour couvrir le graphique 6 mois + navigation
-    final start = DateTime(_selectedMonth.year, _selectedMonth.month - 7);
-    _allTransactions = await (_db.select(_db.transactions)
-          ..where((t) => t.date.isBiggerOrEqualValue(start))
-          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
-        .get();
-
-    _refreshMonthTransactions();
-    _isLoading = false;
-    notifyListeners();
+    try {
+      _categories = await _categoryRepo.fetchCategories();
+      // Charge 8 mois de données pour couvrir le graphique 6 mois + navigation
+      _allTransactions = await _transactionRepo.fetchTransactions(limit: 2000);
+      _refreshMonthTransactions();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void _refreshMonthTransactions() {
@@ -103,7 +102,7 @@ class StatsViewModel extends ChangeNotifier {
     for (final entry in byCategory.entries) {
       final cat = _categories.firstWhere(
         (c) => c.id == entry.key,
-        orElse: () => Category(
+        orElse: () => const Category(
           id: '__other__',
           name: 'Autre',
           iconCode: 'help_outline',
@@ -128,12 +127,8 @@ class StatsViewModel extends ChangeNotifier {
           .toList();
       result.add(MonthlyStats(
         month: month,
-        income: monthTxs
-            .where((t) => t.type == 'income')
-            .fold(0.0, (s, t) => s + t.amount),
-        expense: monthTxs
-            .where((t) => t.type == 'expense')
-            .fold(0.0, (s, t) => s + t.amount.abs()),
+        income: monthTxs.where((t) => t.type == 'income').fold(0.0, (s, t) => s + t.amount),
+        expense: monthTxs.where((t) => t.type == 'expense').fold(0.0, (s, t) => s + t.amount.abs()),
       ));
     }
     return result;
