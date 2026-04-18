@@ -24,6 +24,7 @@ class TransactionRepository {
       'date': t.date.toIso8601String(),
       if (t.note != null) 'note': t.note,
       if (t.categoryId != null) 'categoryId': t.categoryId,
+      if (t.paymentMethodId != null) 'paymentMethodId': t.paymentMethodId,
     });
     return Transaction.fromJson(response.data as Map<String, dynamic>);
   }
@@ -34,6 +35,7 @@ class TransactionRepository {
       'type': t.type,
       'note': t.note,
       'categoryId': t.categoryId,
+      'paymentMethodId': t.paymentMethodId,
       'date': t.date.toIso8601String(),
       'isChecked': t.isChecked,
     });

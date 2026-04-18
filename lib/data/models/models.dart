@@ -59,6 +59,7 @@ class Transaction {
     bool? isChecked,
     String? accountId,
     Object? categoryId = _keep,
+    Object? paymentMethodId = _keep,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -69,7 +70,7 @@ class Transaction {
       isChecked: isChecked ?? this.isChecked,
       accountId: accountId ?? this.accountId,
       categoryId: categoryId == _keep ? this.categoryId : categoryId as String?,
-      paymentMethodId: paymentMethodId,
+      paymentMethodId: paymentMethodId == _keep ? this.paymentMethodId : paymentMethodId as String?,
       isMonthly: isMonthly,
     );
   }

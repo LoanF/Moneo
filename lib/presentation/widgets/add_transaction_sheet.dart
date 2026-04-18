@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart' hide Category;
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/helpers/icon_helper.dart';
@@ -32,6 +32,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   bool _isTransfer = false;
   Category? _selectedParent;
   Category? _selectedSub;
+  PaymentMethod? _selectedPaymentMethod;
   BankAccount? _targetAccount;
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
@@ -48,8 +49,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _setInitialCategory();
+        _setInitialPaymentMethod();
       });
     }
+  }
+
+  void _setInitialPaymentMethod() {
+    if (widget.transaction?.paymentMethodId == null) return;
+    final methods = context.read<HomeViewModel>().paymentMethods;
+    try {
+      _selectedPaymentMethod = methods.firstWhere((m) => m.id == widget.transaction!.paymentMethodId);
+      setState(() {});
+    } catch (_) {}
   }
 
   void _setInitialCategory() {
@@ -227,6 +238,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 _buildAccountDropdown(),
               ] else ...[
                 _buildCategorySection(),
+                const SizedBox(height: 20),
+                _buildPaymentMethodSection(),
               ],
               const SizedBox(height: 32),
               SizedBox(
@@ -392,6 +405,53 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     );
   }
 
+  Widget _buildPaymentMethodSection() {
+    final methods = context.read<HomeViewModel>().paymentMethods;
+    if (methods.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Moyen de paiement", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 44,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: methods.length,
+            itemBuilder: (context, i) {
+              final method = methods[i];
+              final isSelected = _selectedPaymentMethod?.id == method.id;
+              return GestureDetector(
+                onTap: () => setState(() {
+                  _selectedPaymentMethod = isSelected ? null : method;
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.mainColor.withValues(alpha: 0.15) : AppColors.thirdBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected ? Border.all(color: AppColors.mainColor, width: 1.5) : null,
+                  ),
+                  child: Text(
+                    method.name,
+                    style: TextStyle(
+                      color: isSelected ? AppColors.mainColor : AppColors.grey1,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   void _submit() async {
     if (_isSubmitting) return;
     
@@ -429,6 +489,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             type: _isExpense ? 'expense' : 'income',
             note: _titleController.text,
             categoryId: finalCategoryId,
+            paymentMethodId: _selectedPaymentMethod?.id,
             date: _selectedDate,
           ));
         } else {
@@ -437,6 +498,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             amount: finalAmount,
             type: _isExpense ? 'expense' : 'income',
             categoryId: finalCategoryId,
+            paymentMethodId: _selectedPaymentMethod?.id,
             date: _selectedDate,
           );
         }
@@ -446,6 +508,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
       }
     }
   }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide Category;
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/models.dart';
@@ -185,6 +185,35 @@ class _HomePageState extends State<HomePage> {
 
     if (vm.isLoading && transactions.isEmpty) {
       return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+    }
+
+    if (vm.errorMessage != null && transactions.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.grey1),
+                const SizedBox(height: 16),
+                Text(
+                  vm.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.secondaryText),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => vm.init(),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     if (transactions.isEmpty) {

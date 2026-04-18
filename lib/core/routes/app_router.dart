@@ -3,6 +3,7 @@ import 'package:moneo/presentation/views/accounts_manager_page.dart';
 import 'package:moneo/presentation/views/edit_profile_page.dart';
 import 'package:moneo/presentation/views/home_page.dart';
 import 'package:moneo/presentation/views/monthly_operations_page.dart';
+import 'package:moneo/presentation/views/payment_methods_manager_page.dart';
 import 'package:moneo/presentation/views/stats_page.dart';
 import 'package:moneo/presentation/views/settings_page.dart';
 import '../../presentation/views/categories_manager_page.dart';
@@ -140,6 +141,11 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.notificationsSettings,
       name: 'notificationsSettings',
       builder: (context, state) => const NotificationsSettingsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.paymentMethodsManager,
+      name: 'paymentMethodsManager',
+      builder: (context, state) => const PaymentMethodsManagerPage(),
     ),
   ],
 );

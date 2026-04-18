@@ -1,6 +1,9 @@
-import 'package:flutter/material.dart' hide Category;
+import 'dart:async';
+import 'package:flutter/material.dart';
 import '../../core/repositories/category_repository.dart';
 import '../../core/repositories/transaction_repository.dart';
+import '../../core/services/realtime_service.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/models.dart';
 
 class MonthlyStats {
@@ -13,33 +16,63 @@ class MonthlyStats {
 class StatsViewModel extends ChangeNotifier {
   final TransactionRepository _transactionRepo;
   final CategoryRepository _categoryRepo;
+  final RealtimeService _realtimeService;
+
+  StreamSubscription<RealtimeEvent>? _realtimeSub;
+  bool _realtimeSetup = false;
 
   DateTime _selectedMonth;
   List<Transaction> _allTransactions = [];
   List<Transaction> _monthTransactions = [];
   List<Category> _categories = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
-  StatsViewModel(this._transactionRepo, this._categoryRepo)
+  StatsViewModel(this._transactionRepo, this._categoryRepo, this._realtimeService)
       : _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
   DateTime get selectedMonth => _selectedMonth;
   bool get canGoNext => _selectedMonth.isBefore(DateTime(DateTime.now().year, DateTime.now().month));
 
   Future<void> init() async {
+    if (!_realtimeSetup) {
+      _realtimeSetup = true;
+      _realtimeSub?.cancel();
+      _realtimeSub = _realtimeService.events.listen((event) {
+        if (event.model == 'Transaction') _reload();
+      });
+    }
+
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
       _categories = await _categoryRepo.fetchCategories();
-      // Charge 8 mois de données pour couvrir le graphique 6 mois + navigation
       _allTransactions = await _transactionRepo.fetchTransactions(limit: 2000);
       _refreshMonthTransactions();
+    } catch (e) {
+      _errorMessage = handleError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _reload() async {
+    try {
+      _allTransactions = await _transactionRepo.fetchTransactions(limit: 2000);
+      _refreshMonthTransactions();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    super.dispose();
   }
 
   void _refreshMonthTransactions() {

@@ -7,6 +7,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
 import '../../data/constants/assets.dart';
 import '../view_models/auth_view_model.dart';
+import 'payment_methods_manager_page.dart';
 
 class SetupPage extends StatefulWidget {
   const SetupPage({super.key});
@@ -22,9 +23,9 @@ class _SetupPageState extends State<SetupPage> {
   final List<Map<String, dynamic>> _accounts = [];
 
   final List<Map<String, dynamic>> _paymentMethods = [
-    {'name': 'Espèces', 'type': 'Débit'},
-    {'name': 'Carte Bancaire', 'type': 'Débit'},
-    {'name': 'Virement', 'type': 'Débit'},
+    {'name': 'Espèces', 'type': 'cash'},
+    {'name': 'Carte Bancaire', 'type': 'debit'},
+    {'name': 'Virement', 'type': 'transfer'},
   ];
 
   void _completeSetup() async {
@@ -172,6 +173,7 @@ class _SetupPageState extends State<SetupPage> {
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final method = _paymentMethods[index];
+              final type = method['type'] as String;
               return Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -180,18 +182,14 @@ class _SetupPageState extends State<SetupPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      method['type'] == 'Débit' ? Icons.arrow_downward : Icons.credit_card,
-                      color: method['type'] == 'Débit' ? Colors.green : Colors.orange,
-                      size: 20,
-                    ),
+                    Icon(paymentMethodTypeIcon(type), color: AppColors.mainColor, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(method['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                          Text(method['type'], style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
+                          Text(method['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text(paymentMethodTypeLabel(type), style: const TextStyle(fontSize: 12, color: AppColors.secondaryText)),
                         ],
                       ),
                     ),
@@ -206,7 +204,11 @@ class _SetupPageState extends State<SetupPage> {
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: _showAddPaymentMethodDialog,
+            onPressed: () => showPaymentMethodFormSheet(
+              context,
+              null,
+              onSaveLocal: (name, type) => setState(() => _paymentMethods.add({'name': name, 'type': type})),
+            ),
             icon: const Icon(Icons.add_card),
             label: const Text("Nouveau moyen de paiement"),
           ),
@@ -330,71 +332,4 @@ class _SetupPageState extends State<SetupPage> {
     );
   }
 
-  void _showAddPaymentMethodDialog() {
-    final nameController = TextEditingController();
-    String selectedType = 'Débit';
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Moyen de paiement", style: TextStyle(fontSize: 20)),
-          backgroundColor: AppColors.secondaryBackground,
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Nom du moyen (ex: AMEX)", labelStyle: TextStyle(fontSize: 13)),
-              ),
-              const SizedBox(height: 24),
-              const Text("Type de prélèvement :", style: TextStyle(fontSize: 14, color: AppColors.secondaryText)),
-              const SizedBox(height: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'Débit', label: Text('Débit'), icon: Icon(Icons.arrow_downward)),
-                  ButtonSegment(value: 'Crédit', label: Text('Crédit'), icon: Icon(Icons.credit_card)),
-                ],
-                selected: {selectedType},
-                onSelectionChanged: (newSelection) {
-                  setDialogState(() => selectedType = newSelection.first);
-                },
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return selectedType == 'Débit'
-                          ? AppColors.primaryRed
-                          : AppColors.primaryGreen;
-                    }
-                    return Colors.transparent;
-                  }),
-                  foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return Colors.white;
-                    }
-                    return AppColors.secondaryText;
-                  }),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Annuler")),
-            FilledButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  setState(() => _paymentMethods.add({
-                    'name': nameController.text,
-                    'type': selectedType
-                  }));
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Ajouter"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

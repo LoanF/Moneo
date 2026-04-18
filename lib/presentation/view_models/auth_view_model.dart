@@ -67,6 +67,20 @@ class AuthViewModel extends CommonViewModel {
     await _authService.signOut();
   }
 
+  Future<bool> deleteAccount() async {
+    isLoading = true;
+    errorMessage = null;
+    try {
+      await _authService.deleteAccount();
+      isLoading = false;
+      return true;
+    } catch (e) {
+      isLoading = false;
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
   Future<bool> forgotPassword(String email) async {
     isLoading = true;
     errorMessage = null;

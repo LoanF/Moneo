@@ -20,6 +20,7 @@ abstract class IAuthService {
   Future<void> resetPassword(String email, String code, String newPassword);
   Future<void> verifyEmail(String code);
   Future<void> resendVerification();
+  Future<void> deleteAccount();
   AppUser? get currentUser;
   void dispose();
 }
@@ -218,6 +219,26 @@ class AuthService implements IAuthService {
 
   @override
   Future<void> signOut() async {
+    try {
+      await getIt<ApiClient>().dio.post('/auth/logout');
+    } catch (_) {}
+    await _storage.deleteAll();
+    await _appUserService.clearUser();
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
+    _authStreamController.add(null);
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      await getIt<ApiClient>().dio.delete('/auth/me');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map) throw data['error'] ?? 'Erreur lors de la suppression';
+      throw 'Erreur lors de la suppression';
+    }
     await _storage.deleteAll();
     await _appUserService.clearUser();
     try {

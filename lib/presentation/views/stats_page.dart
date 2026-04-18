@@ -38,28 +38,58 @@ class _StatsPageState extends State<StatsPage> {
       ),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildContent(vm),
+          : vm.errorMessage != null
+              ? _buildError(vm)
+              : _buildContent(vm),
+    );
+  }
+
+  Widget _buildError(StatsViewModel vm) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.grey1),
+            const SizedBox(height: 16),
+            Text(
+              vm.errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.secondaryText),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => vm.init(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildContent(StatsViewModel vm) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-      children: [
-        _buildMonthSelector(vm),
-        const SizedBox(height: 16),
-        _buildSummaryCards(vm),
-        const SizedBox(height: 12),
-        _buildBarChart(vm),
-        const SizedBox(height: 12),
-        _buildSavingsRate(vm),
-        if (vm.categoryBreakdown.isNotEmpty) ...[
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+        children: [
+          _buildMonthSelector(vm),
+          const SizedBox(height: 16),
+          _buildSummaryCards(vm),
           const SizedBox(height: 12),
-          _buildCategoryBreakdown(vm),
+          _buildBarChart(vm),
+          const SizedBox(height: 12),
+          _buildSavingsRate(vm),
+          if (vm.categoryBreakdown.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildCategoryBreakdown(vm),
+          ],
+          const SizedBox(height: 12),
+          _buildQuickStats(vm),
         ],
-        const SizedBox(height: 12),
-        _buildQuickStats(vm),
-      ],
+      ),
     );
   }
 

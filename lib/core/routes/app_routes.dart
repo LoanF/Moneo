@@ -12,4 +12,5 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String verifyEmail = '/verify-email';
   static const String notificationsSettings = '/notifications-settings';
+  static const String paymentMethodsManager = '/payment-methods';
 }
