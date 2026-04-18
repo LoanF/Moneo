@@ -7,53 +7,33 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1048208899254:android:3806eafb8952eeb99d3a17",
+        "mobilesdk_app_id": "1:1048208899254:android:e1908d72913528dc9d3a17",
         "android_client_info": {
-          "package_name": "com.moneo"
+          "package_name": "com.lfxtech.moneo"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1048208899254-9i5pcch2vcgapa352e88re81bumcrsqg.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDtCNuWD-gSsHf8Pt1gWd-f3qdnf8F07Q0"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "1048208899254-9i5pcch2vcgapa352e88re81bumcrsqg.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "1048208899254-1bcap152mg0n3kgq68em5u74c4u0s7a5.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.moneo.moneo"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1048208899254:android:aea0bbf8534295b49d3a17",
-        "android_client_info": {
-          "package_name": "com.moneo.app"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "1048208899254-s0e3j2bvpofhnocgseeaj58ui3ea1l5h.apps.googleusercontent.com",
+          "client_id": "1048208899254-4r7m2963dkmptvavm90ijsmlont3j8st.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.moneo.app",
+            "package_name": "com.lfxtech.moneo",
+            "certificate_hash": "8e10d0154b22f7800c2a2c2f06daaa86fd833d8d"
+          }
+        },
+        {
+          "client_id": "1048208899254-e8c15e0dlcg6243snv89rsgh2m30st85.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lfxtech.moneo",
+            "certificate_hash": "063eb4cb08fa115252c7b4989e71d4ea3fbc6283"
+          }
+        },
+        {
+          "client_id": "1048208899254-je21fg6dieq4jbdi811gd2qlh3psegkg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lfxtech.moneo",
             "certificate_hash": "7f85d4622888b24dc507260bef9417eb8d4951af"
           }
         },

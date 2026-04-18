@@ -1,76 +1,75 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import '../../data/enums/firebase_collection_enum.dart';
 import '../../data/models/app_user_model.dart';
+import '../interceptor/api_client.dart';
 
 abstract class IAppUserService {
-  Future<AppUser?> getUserById(String uid);
-
   Future<void> createUser(AppUser user);
-
   Future<void> updateUser(AppUser user);
-
   Future<AppUser> updateFcmToken(AppUser appUser);
-
+  Future<AppUser?> loadCurrentUser();
+  Future<void> clearUser();
+  Future<void> setEmailVerified(String userId);
+  Future<AppUser> updateNotificationPrefs(Map<String, bool> prefs);
   AppUser? get currentAppUser;
 }
 
 class AppUserService implements IAppUserService {
-  final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
+  final ApiClient _apiClient;
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
-  late final CollectionReference<AppUser> usersCollection = _firebaseFirestore
-      .collection(FirestoreCollection.users.value)
-      .withConverter<AppUser>(
-    fromFirestore: (snapshot, _) => AppUser.fromJson(snapshot.data()!),
-    toFirestore: (user, _) => user.toJson(),
-  );
+  AppUserService(this._apiClient);
 
   AppUser? _currentAppUser;
 
   @override
-  Future<AppUser?> getUserById(String uid) async {
-    final doc = await usersCollection.doc(uid).get();
-    return doc.data();
-  }
-
-  @override
   Future<void> createUser(AppUser user) async {
-    user = await updateFcmToken(user);
-    await usersCollection.doc(user.uid).set(user);
     _currentAppUser = user;
   }
 
   @override
   Future<void> updateUser(AppUser user) async {
-    _currentAppUser ??= await getUserById(user.uid);
+    final response = await _apiClient.dio.patch('/auth/profile', data: user.toJson());
+    final serverData = response.data['user'] ?? response.data;
+    final serverUser = AppUser.fromJson(serverData);
+    _currentAppUser = serverUser.copyWith(
+      hasCompletedSetup: user.hasCompletedSetup,
+      emailVerified: user.emailVerified,
+      paymentMethods: user.paymentMethods,
+    );
+  }
 
-    if (_currentAppUser?.fcmToken == null) {
-      user = await updateFcmToken(user);
-    }
+  @override
+  Future<AppUser?> loadCurrentUser() async {
+    return _currentAppUser;
+  }
 
-    if (_currentAppUser != null &&
-        _currentAppUser!.toJson().toString() == user.toJson().toString()) {
-      return;
-    }
+  @override
+  Future<void> clearUser() async {
+    _currentAppUser = null;
+  }
 
-    await usersCollection.doc(user.uid).update(user.toJson());
+  @override
+  Future<void> setEmailVerified(String userId) async {
+    _currentAppUser = _currentAppUser?.copyWith(emailVerified: true);
   }
 
   @override
   Future<AppUser> updateFcmToken(AppUser appUser) async {
     final fcmToken = await _firebaseMessaging.getToken();
     if (fcmToken == null) return appUser;
+    await _apiClient.dio.patch('/auth/profile', data: {'fcmToken': fcmToken});
+    final updated = appUser.copyWith(fcmToken: fcmToken);
+    _currentAppUser = updated;
+    return updated;
+  }
 
-    return AppUser(
-      uid: appUser.uid,
-      displayName: appUser.displayName,
-      email: appUser.email,
-      photoURL: appUser.photoURL,
-      createdAt: appUser.createdAt,
-      updatedAt: appUser.updatedAt,
-      fcmToken: fcmToken,
-    );
+  @override
+  Future<AppUser> updateNotificationPrefs(Map<String, bool> prefs) async {
+    final current = _currentAppUser!;
+    await _apiClient.dio.patch('/auth/profile', data: {'notificationPrefs': prefs});
+    final updated = current.copyWith(notificationPrefs: prefs);
+    _currentAppUser = updated;
+    return updated;
   }
 
   @override
