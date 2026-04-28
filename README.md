@@ -7,7 +7,7 @@
 
 [![CI/CD Status](https://github.com/LoanF/Moneo/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/LoanF/Moneo/actions/workflows/ci-cd.yml)
 ![Latest Release](https://img.shields.io/github/v/release/LoanF/Moneo?label=version&color=blue)
-[![Codecov](https://codecov.io/github/LoanF/Moneo/graph/badge.svg?token=CE717LW0U9)](https://codecov.io/github/LoanF/Moneo)
+[![Codecov](https://codecov.io/gh/LoanF/Moneo/graph/badge.svg?token=CE717LW0U9)](https://codecov.io/gh/LoanF/Moneo)
 ![License](https://img.shields.io/github/license/LoanF/Moneo)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
