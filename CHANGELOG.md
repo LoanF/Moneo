@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.0](https://github.com/LoanF/Moneo/compare/v1.1.0...v1.2.0) (2026-04-28)
+
+
+### Features
+
+* tutorial ([ca6589f](https://github.com/LoanF/Moneo/commit/ca6589fbba5f1f362e266c4c79c94efe4a405a45))
+
+
+### Bug Fixes
+
+* ci-cd ([de3d9d1](https://github.com/LoanF/Moneo/commit/de3d9d1b306602a7c69af185f924e6f86580a22a))
+* transfert + language ([f6f15fb](https://github.com/LoanF/Moneo/commit/f6f15fb09e2b4b959061a0fbf75606f5d32ccd1e))
+
 ## 1.1.0 (2026-04-28)
 
 
