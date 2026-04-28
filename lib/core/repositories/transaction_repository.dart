@@ -33,13 +33,29 @@ class TransactionRepository {
     final response = await _api.dio.patch('/transactions/${t.id}', data: {
       'amount': t.amount,
       'type': t.type,
-      'note': t.note,
-      'categoryId': t.categoryId,
-      'paymentMethodId': t.paymentMethodId,
       'date': t.date.toIso8601String(),
       'isChecked': t.isChecked,
+      if (t.note != null) 'note': t.note,
+      if (t.categoryId != null) 'categoryId': t.categoryId,
+      if (t.paymentMethodId != null) 'paymentMethodId': t.paymentMethodId,
     });
     return Transaction.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> addTransfer({
+    required String fromAccountId,
+    required String toAccountId,
+    required double amount,
+    String? note,
+    DateTime? date,
+  }) async {
+    await _api.dio.post('/transactions/transfer', data: {
+      'fromAccountId': fromAccountId,
+      'toAccountId': toAccountId,
+      'amount': amount,
+      if (note != null) 'note': note,
+      if (date != null) 'date': date.toIso8601String(),
+    });
   }
 
   Future<void> deleteTransaction(String id) async {
