@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../core/extensions/string_extensions.dart';
 import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
 import '../../data/models/models.dart';
@@ -34,12 +35,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Category? _selectedSub;
   PaymentMethod? _selectedPaymentMethod;
   BankAccount? _targetAccount;
+  late BankAccount _selectedAccount;
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedAccount = widget.selectedAccount;
     if (widget.transaction != null) {
       _titleController.text = widget.transaction!.note ?? "";
       _amountController.text = widget.transaction!.amount.abs().toStringAsFixed(2);
@@ -232,6 +235,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (widget.transaction == null && widget.accounts.length > 1) ...[
+                _buildAccountSelector(),
+                const SizedBox(height: 16),
+              ],
               if (_isTransfer) ...[
                 const Text("Vers le compte", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 12),
@@ -289,8 +296,53 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     );
   }
 
+  Widget _buildAccountSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Compte", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 44,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.accounts.length,
+            itemBuilder: (context, i) {
+              final acc = widget.accounts[i];
+              final isSelected = _selectedAccount.id == acc.id;
+              return GestureDetector(
+                onTap: () => setState(() {
+                  _selectedAccount = acc;
+                  _targetAccount = null;
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.mainColor.withValues(alpha: 0.15) : AppColors.thirdBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected ? Border.all(color: AppColors.mainColor, width: 1.5) : null,
+                  ),
+                  child: Text(
+                    acc.name.capitalize(),
+                    style: TextStyle(
+                      color: isSelected ? AppColors.mainColor : AppColors.grey1,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAccountDropdown() {
-    final others = widget.accounts.where((a) => a.id != widget.selectedAccount.id).toList();
+    final others = widget.accounts.where((a) => a.id != _selectedAccount.id).toList();
     return DropdownButtonFormField<BankAccount>(
       dropdownColor: AppColors.secondaryBackground,
       initialValue: _targetAccount ?? (others.isNotEmpty ? others.first : null),
@@ -466,7 +518,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       if (_isTransfer) {
         if (_targetAccount != null) {
           await homeViewModel.addTransfer(
-            sourceAccount: widget.selectedAccount,
+            sourceAccount: _selectedAccount,
             targetAccount: _targetAccount!,
             title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
             amount: amount,
@@ -477,7 +529,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         String? finalCategoryId;
         if (_selectedParent != null) {
           final rawId = _selectedSub?.id ?? _selectedParent!.id;
-          // Strip the virtual "other_" prefix used locally for UI
           finalCategoryId = rawId.startsWith('other_')
               ? rawId.replaceFirst('other_', '')
               : rawId;
@@ -500,6 +551,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             categoryId: finalCategoryId,
             paymentMethodId: _selectedPaymentMethod?.id,
             date: _selectedDate,
+            account: _selectedAccount,
           );
         }
       }

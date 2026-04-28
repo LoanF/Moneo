@@ -1,0 +1,162 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  check:
+    name: Analyse & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Créer firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
+
+      - name: Installer les dépendances
+        run: flutter pub get
+
+      - name: Analyse statique
+        run: flutter analyze
+
+      - name: Tests unitaires avec couverture
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: true
+
+  version_bump:
+    name: Mise à jour de la version & changelog
+    needs: check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Installer les dépendances Node
+        run: npm install
+
+      - name: Configuration Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump Version & Generate Changelog
+        run: |
+          npx standard-version --commit-all -m "chore(release): %s [skip ci]"
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+
+      - name: Get version
+        id: ver
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: \([0-9.]*\).*/\1/')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Push changes and tags
+        run: git push --follow-tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.VERSION }}
+          name: Release v${{ steps.ver.outputs.VERSION }}
+          body_path: CHANGELOG.md
+          generate_release_notes: true
+
+  build_android:
+    name: Build Android
+    needs: version_bump
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Créer firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
+
+      - name: Installer les dépendances
+        run: flutter pub get
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      - name: Archiver l'AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+  build_ios:
+    name: Build iOS
+    needs: version_bump
+    runs-on: macos-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Créer firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
+
+      - name: Installer les dépendances
+        run: flutter pub get
+
+      - name: Build iOS (sans signature)
+        run: flutter build ios --release --no-codesign
+
+      - name: Archiver l'app iOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: build/ios/iphoneos/Runner.app
+          retention-days: 30

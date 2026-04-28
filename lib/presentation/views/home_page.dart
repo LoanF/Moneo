@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildGlobalBalanceHeader(context, homeViewModel.totalBalance),
+          _buildGlobalBalanceHeader(context, homeViewModel.totalBalance, homeViewModel.totalPointedBalance),
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
           _buildAccountSelector(homeViewModel),
           SliverToBoxAdapter(
@@ -87,9 +87,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildGlobalBalanceHeader(BuildContext context, double balance) {
+  Widget _buildGlobalBalanceHeader(BuildContext context, double balance, double pointedBalance) {
+    final showPointed = (balance - pointedBalance).abs() > 0.005;
     return SliverAppBar(
-      expandedHeight: 160,
+      expandedHeight: showPointed ? 185 : 160,
       backgroundColor: AppColors.mainBackground,
       pinned: true,
       elevation: 0,
@@ -124,6 +125,13 @@ class _HomePageState extends State<HomePage> {
                 "${balance.toStringAsFixed(2)} €",
                 style: const TextStyle(color: AppColors.mainText, fontSize: 40, fontWeight: FontWeight.w900),
               ),
+              if (showPointed) ...[
+                const SizedBox(height: 6),
+                Text(
+                  "Dont pointé : ${pointedBalance.toStringAsFixed(2)} €",
+                  style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
+                ),
+              ],
             ],
           ),
         ),
@@ -134,30 +142,36 @@ class _HomePageState extends State<HomePage> {
   Widget _buildAccountSelector(HomeViewModel vm) {
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 110,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        height: 125,
+        child: ReorderableListView(
           scrollDirection: Axis.horizontal,
-          itemCount: vm.accounts.length,
-          itemBuilder: (context, index) {
-            final account = vm.accounts[index];
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          buildDefaultDragHandles: false,
+          onReorder: vm.reorderAccounts,
+          children: vm.accounts.asMap().entries.map((entry) {
+            final account = entry.value;
             final isSelected = vm.selectedAccount?.id == account.id;
-            return GestureDetector(
-              onTap: () => vm.selectAccount(account),
-              child: _buildAccountCard(account, isSelected),
+            return ReorderableDelayedDragStartListener(
+              key: ValueKey(account.id),
+              index: entry.key,
+              child: GestureDetector(
+                onTap: () => vm.selectAccount(account),
+                child: _buildAccountCard(account, isSelected),
+              ),
             );
-          },
+          }).toList(),
         ),
       ),
     );
   }
 
   Widget _buildAccountCard(BankAccount account, bool isSelected) {
+    final showPointed = (account.balance - account.pointedBalance).abs() > 0.005;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: 170,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isSelected ? AppColors.mainColor : AppColors.secondaryBackground,
         borderRadius: BorderRadius.circular(24),
@@ -175,6 +189,17 @@ class _HomePageState extends State<HomePage> {
             "${account.balance.toStringAsFixed(2)} €",
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
           ),
+          if (showPointed) ...[
+            const SizedBox(height: 3),
+            Text(
+              "Pointé : ${account.pointedBalance.toStringAsFixed(2)} €",
+              style: TextStyle(
+                color: isSelected ? Colors.white.withValues(alpha: 0.65) : AppColors.grey1,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     );
