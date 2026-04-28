@@ -99,7 +99,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      lastDate: DateTime(DateTime.now().year + 1),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -194,7 +194,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       setState(() { _isExpense = false; _isTransfer = false; });
                     }),
                     _buildTypeButton("Transfert", _isTransfer, () {
-                      setState(() { _isTransfer = true; _isExpense = true; });
+                      final others = widget.accounts.where((a) => a.id != _selectedAccount.id).toList();
+                      setState(() {
+                        _isTransfer = true;
+                        _isExpense = true;
+                        _targetAccount ??= others.isNotEmpty ? others.first : null;
+                      });
                     }),
                   ],
                 ),
@@ -516,14 +521,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
     try {
       if (_isTransfer) {
-        if (_targetAccount != null) {
-          await homeViewModel.addTransfer(
-            sourceAccount: _selectedAccount,
-            targetAccount: _targetAccount!,
-            title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
-            amount: amount,
-          );
-        }
+        final others = widget.accounts.where((a) => a.id != _selectedAccount.id).toList();
+        final target = _targetAccount ?? (others.isNotEmpty ? others.first : null);
+        if (target == null) return;
+        await homeViewModel.addTransfer(
+          sourceAccount: _selectedAccount,
+          targetAccount: target,
+          title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
+          amount: amount,
+        );
       } else {
         final finalAmount = _isExpense ? -amount : amount;
         String? finalCategoryId;

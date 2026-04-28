@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import '../../core/di.dart';
+import '../../core/services/tutorial_service.dart';
 import '../../data/models/models.dart';
 import '../../core/extensions/string_extensions.dart';
 import '../../core/notifiers/auth_notifier.dart';
@@ -20,16 +23,179 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
 
+  final _balanceKey = GlobalKey();
+  final _accountSelectorKey = GlobalKey();
+  final _fabKey = GlobalKey();
+  final _visibilityKey = GlobalKey();
+  final _statsKey = GlobalKey();
+  final _settingsKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HomeViewModel>().init();
+    getIt<TutorialService>().showNow.addListener(_onShowNow);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<HomeViewModel>().init();
+      _maybeShowTutorial();
     });
+  }
+
+  void _onShowNow() {
+    final service = getIt<TutorialService>();
+    if (!service.showNow.value) return;
+    service.showNow.value = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showTutorial();
+    });
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    final tutorialService = getIt<TutorialService>();
+    if (!await tutorialService.shouldShowTutorial()) return;
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showTutorial();
+    });
+  }
+
+  Future<void> _showTutorial() async {
+    if (_scrollController.hasClients && _scrollController.offset > 0) {
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOut,
+      );
+    }
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    TutorialCoachMark(
+      targets: _buildTargets(),
+      colorShadow: Colors.black,
+      opacityShadow: 0.85,
+      textSkip: "Passer",
+      alignSkip: Alignment.bottomLeft,
+      paddingFocus: 8,
+      onFinish: () => getIt<TutorialService>().markTutorialSeen(),
+      onSkip: () {
+        getIt<TutorialService>().markTutorialSeen();
+        return true;
+      },
+    ).show(context: context);
+  }
+
+  TargetPosition? _renderBoxPosition(GlobalKey key) {
+    final rb = key.currentContext?.findRenderObject() as RenderBox?;
+    if (rb == null) return null;
+    return TargetPosition(rb.size, rb.localToGlobal(Offset.zero));
+  }
+
+  List<TargetFocus> _buildTargets() {
+    return [
+      TargetFocus(
+        identify: "balance",
+        targetPosition: _renderBoxPosition(_balanceKey),
+        shape: ShapeLightFocus.RRect,
+        radius: 20,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            child: _TutorialCard(
+              step: "1 / 6",
+              title: "Solde global",
+              description:
+                  "La somme de tous vos comptes en un coup d'œil.\n\nLe solde « pointé » correspond aux transactions que vous avez vérifiées, utile pour rapprocher votre relevé bancaire.",
+            ),
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "accounts",
+        keyTarget: _accountSelectorKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 24,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            child: _TutorialCard(
+              step: "2 / 6",
+              title: "Vos comptes",
+              description:
+                  "Appuyez sur un compte pour filtrer ses transactions.\n\nMaintenez enfoncé et glissez pour réorganiser l'ordre des cartes.",
+            ),
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "fab",
+        keyTarget: _fabKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 20,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            child: _TutorialCard(
+              step: "3 / 6",
+              title: "Nouvelle opération",
+              description:
+                  "Ajoutez une dépense, un revenu ou un transfert entre comptes.\n\nVous pouvez choisir une catégorie, un moyen de paiement et modifier la date.",
+            ),
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "visibility",
+        keyTarget: _visibilityKey,
+        shape: ShapeLightFocus.Circle,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            child: _TutorialCard(
+              step: "4 / 6",
+              title: "Pointage",
+              description:
+                  "Glissez une transaction vers la droite pour la pointer (marquée comme vérifiée).\n\nGlissez vers la gauche pour la supprimer.\n\nCe bouton masque ou affiche les transactions déjà pointées.",
+            ),
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "stats",
+        keyTarget: _statsKey,
+        shape: ShapeLightFocus.Circle,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            child: _TutorialCard(
+              step: "5 / 6",
+              title: "Statistiques",
+              description:
+                  "Visualisez vos dépenses et revenus par catégorie.\n\nSuivez l'évolution mensuelle de votre budget avec des graphiques détaillés.",
+            ),
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "settings",
+        keyTarget: _settingsKey,
+        shape: ShapeLightFocus.Circle,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            child: _TutorialCard(
+              step: "6 / 6",
+              title: "Paramètres",
+              description:
+                  "Gérez vos mensualisations (loyer, abonnements...) ajoutées automatiquement chaque mois, ainsi que vos catégories, moyens de paiement et comptes.",
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 
   @override
   void dispose() {
+    getIt<TutorialService>().showNow.removeListener(_onShowNow);
     _scrollController.dispose();
     super.dispose();
   }
@@ -59,6 +225,7 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
+                    key: _visibilityKey,
                     onPressed: () => homeViewModel.toggleHideChecked(),
                     icon: Icon(
                       homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
@@ -78,6 +245,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        key: _fabKey,
         onPressed: () => _showAddTransactionModal(context),
         backgroundColor: AppColors.mainColor,
         elevation: 4,
@@ -97,10 +265,12 @@ class _HomePageState extends State<HomePage> {
       scrolledUnderElevation: 0,
       actions: [
         IconButton(
+          key: _statsKey,
           icon: const Icon(Icons.bar_chart_rounded, color: AppColors.mainText),
           onPressed: () => context.push(AppRoutes.stats),
         ),
         IconButton(
+          key: _settingsKey,
           icon: const Icon(Icons.settings_outlined, color: AppColors.mainText),
           onPressed: () => context.push(AppRoutes.settings),
         ),
@@ -108,6 +278,7 @@ class _HomePageState extends State<HomePage> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
+          key: _balanceKey,
           decoration: const BoxDecoration(
             color: AppColors.secondaryBackground,
             borderRadius: BorderRadius.only(
@@ -142,6 +313,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildAccountSelector(HomeViewModel vm) {
     return SliverToBoxAdapter(
       child: SizedBox(
+        key: _accountSelectorKey,
         height: 125,
         child: ReorderableListView(
           scrollDirection: Axis.horizontal,
@@ -250,12 +422,12 @@ class _HomePageState extends State<HomePage> {
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-            (context, index) {
+        (context, index) {
           if (index >= transactions.length) return null;
           final trans = transactions[index];
 
           final categoryData = categories.firstWhere(
-                (c) => c.id == trans.categoryId,
+            (c) => c.id == trans.categoryId,
             orElse: () => Category(
               id: 'autre',
               name: 'Autre',
@@ -343,6 +515,55 @@ class _HomePageState extends State<HomePage> {
         accounts: homeViewModel.accounts,
         selectedAccount: homeViewModel.selectedAccount!,
         transaction: transaction,
+      ),
+    );
+  }
+}
+
+class _TutorialCard extends StatelessWidget {
+  final String step;
+  final String title;
+  final String description;
+
+  const _TutorialCard({
+    required this.step,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.secondaryBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.mainColor.withValues(alpha: 0.4), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(color: AppColors.mainText, fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                step,
+                style: const TextStyle(color: AppColors.grey1, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            description,
+            style: const TextStyle(color: AppColors.secondaryText, fontSize: 14, height: 1.5),
+          ),
+        ],
       ),
     );
   }

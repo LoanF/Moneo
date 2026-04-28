@@ -14,6 +14,7 @@ import 'notifiers/lock_notifier.dart';
 import 'services/auth_service.dart';
 import 'services/biometric_service.dart';
 import 'services/realtime_service.dart';
+import 'services/tutorial_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -22,6 +23,7 @@ void configureDependencies() {
   getIt.registerSingleton<BiometricService>(BiometricService());
   getIt.registerSingleton<LockNotifier>(LockNotifier(getIt<BiometricService>()));
   getIt.registerSingleton<RealtimeService>(RealtimeService());
+  getIt.registerSingleton<TutorialService>(TutorialService());
 
   getIt.registerLazySingleton<IAppUserService>(() => AppUserService(getIt<ApiClient>()));
   getIt.registerLazySingleton(() => TransactionRepository(getIt<ApiClient>()));

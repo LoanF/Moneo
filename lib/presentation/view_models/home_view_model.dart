@@ -210,27 +210,13 @@ class HomeViewModel extends CommonViewModel {
     required double amount,
     String? title,
   }) async {
-    final date = DateTime.now();
-    final note = title ?? 'Transfert';
     try {
-      await Future.wait([
-        _transactionRepo.addTransaction(Transaction(
-          id: _uuid.v4(),
-          amount: -amount,
-          type: 'transfer',
-          accountId: sourceAccount.id,
-          date: date,
-          note: '$note → ${targetAccount.name}',
-        )),
-        _transactionRepo.addTransaction(Transaction(
-          id: _uuid.v4(),
-          amount: amount,
-          type: 'transfer',
-          accountId: targetAccount.id,
-          date: date,
-          note: '$note ← ${sourceAccount.name}',
-        )),
-      ]);
+      await _transactionRepo.addTransfer(
+        fromAccountId: sourceAccount.id,
+        toAccountId: targetAccount.id,
+        amount: amount,
+        note: title ?? 'Transfert',
+      );
       await Future.wait([_loadTransactions(), _refreshAccounts()]);
       notifyListeners();
     } catch (e) {

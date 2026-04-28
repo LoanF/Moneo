@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -106,6 +107,22 @@ class _MoneoState extends State<Moneo> with WidgetsBindingObserver {
       darkTheme: AppTheme.darkTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('fr'),
+        Locale('en'),
+        Locale('es'),
+        Locale('de'),
+        Locale('it'),
+        Locale('pt'),
+        Locale('ar'),
+        Locale('zh'),
+        Locale('ja'),
+      ],
       builder: (context, child) {
         return Consumer2<LockNotifier, AuthNotifier>(
           builder: (context, lockNotifier, authNotifier, _) {
