@@ -1,0 +1,8 @@
+{
+  "packageFiles": [
+    { "filename": "pubspec.yaml", "updater": ".github/pubspec-updater.js" }
+  ],
+  "bumpFiles": [
+    { "filename": "pubspec.yaml", "updater": ".github/pubspec-updater.js" }
+  ]
+}

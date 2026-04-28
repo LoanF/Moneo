@@ -1,20 +1,33 @@
 # Moneo
 
-Personal finance tracking app built with **Flutter**. Connects to the [Moneo API](https://github.com/LoanF/moneo-api).
+<div align="center">
+
+<img src="https://img.shields.io/badge/Flutter-3-02569B?logo=flutter&logoColor=white" alt="flutter" />
+<img src="https://img.shields.io/badge/Dart-3-0175C2?logo=dart&logoColor=white" alt="dart" />
+
+[![CI/CD Status](https://github.com/LoanF/Moneo/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/LoanF/Moneo/actions/workflows/ci-cd.yml)
+![Latest Release](https://img.shields.io/github/v/release/LoanF/Moneo?label=version&color=blue)
+[![Codecov](https://codecov.io/github/LoanF/Moneo/graph/badge.svg?token=PLACEHOLDER)](https://codecov.io/github/LoanF/Moneo)
+![License](https://img.shields.io/github/license/LoanF/Moneo)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+
+**Application mobile de suivi des finances personnelles** *Construite avec Flutter, connectée à l'[API Moneo](https://github.com/LoanF/moneo-api)*
+
+</div>
 
 ## Features
 
-- **Dashboard** — Global balance across all accounts, transaction list with swipe-to-check and swipe-to-delete
-- **Statistics** — Monthly income/expense breakdown, 6-month bar chart, category breakdown, savings rate
-- **Accounts manager** — Create and manage multiple bank accounts
-- **Categories manager** — Custom categories with icons and colors
-- **Payment methods** — Track transactions by payment method (card, cash, transfer…)
-- **Recurring payments** — Define monthly operations that auto-generate transactions server-side
-- **Authentication** — Email/password + Google Sign-In, email verification, password reset
-- **Biometric lock** — Face ID / fingerprint auto-lock with configurable timeout
-- **Push notifications** — Monthly recap and activity reminders via Firebase Cloud Messaging
-- **Realtime sync** — Live data updates via Server-Sent Events; changes on one device appear instantly on another
-- **Setup wizard** — First-launch flow to create accounts and payment methods before accessing the app
+- **Dashboard** — Solde global sur tous les comptes, liste des transactions avec swipe-to-check et swipe-to-delete
+- **Statistics** — Décomposition revenus/dépenses mensuelle, graphique en barres sur 6 mois, répartition par catégorie, taux d'épargne
+- **Accounts manager** — Création et gestion de plusieurs comptes bancaires
+- **Categories manager** — Catégories personnalisées avec icônes et couleurs
+- **Payment methods** — Suivi des transactions par moyen de paiement (carte, espèces, virement…)
+- **Recurring payments** — Paiements mensuels récurrents générés automatiquement côté serveur
+- **Authentication** — Email/mot de passe + Google Sign-In, vérification email, réinitialisation du mot de passe
+- **Biometric lock** — Verrouillage automatique Face ID / empreinte avec délai configurable
+- **Push notifications** — Récapitulatif mensuel et rappels d'activité via Firebase Cloud Messaging
+- **Realtime sync** — Mises à jour en temps réel via Server-Sent Events ; les modifications d'un appareil apparaissent instantanément sur les autres
+- **Setup wizard** — Assistant de premier lancement pour créer des comptes et moyens de paiement
 
 ## Tech stack
 
@@ -29,6 +42,7 @@ Personal finance tracking app built with **Flutter**. Connects to the [Moneo API
 | Push notifications | [firebase_messaging](https://pub.dev/packages/firebase_messaging) |
 | Google auth | [google_sign_in](https://pub.dev/packages/google_sign_in) |
 | Biometrics | [local_auth](https://pub.dev/packages/local_auth) |
+| CI | GitHub Actions |
 
 ## Architecture
 
@@ -115,15 +129,61 @@ flutter devices
 ## Build
 
 ```bash
-# Android APK
-flutter build apk --release
-
 # Android App Bundle (Play Store)
 flutter build appbundle --release
 
+# Android APK
+flutter build apk --release
+
 # iOS (requires macOS + Xcode)
-flutter build ios --release
+flutter build ios --release --no-codesign
 ```
+
+## Tests
+
+```bash
+# Lancer tous les tests
+flutter test
+
+# Mode watch
+flutter test --watch
+```
+
+### Ce qui est couvert
+
+| Fichier | Ce qui est testé |
+|---|---|
+| `test/widget_test.dart` | `Transaction.fromJson` (champs de base, détection `isMonthly`, types d'amount) |
+| | `BankAccount.fromJson` (tous les champs, `pointedBalance` par défaut) |
+| | `Category.fromJson` (`colorValue` en int ou String) |
+| | `MonthlyPayment.fromJson` (alias `lastProcessed`/`lastApplied`, valeur null) |
+| | `AppUser.fromJson` (uid depuis `id`, `notificationPrefs` par défaut) |
+
+## CI/CD
+
+Le pipeline GitHub Actions se déclenche sur chaque push vers `develop` et `master`.
+
+```
+push → [check] flutter analyze + flutter test
+             ↓ (master uniquement)
+       [version_bump] bump pubspec.yaml + CHANGELOG
+             ↓
+       [build_android] flutter build appbundle  →  artifact AAB (30 j)
+       [build_ios]     flutter build ios         →  artifact .app (30 j)
+```
+
+### Intégration continue (toutes branches)
+
+1. Analyse statique (`flutter analyze`)
+2. Tests unitaires (`flutter test`)
+
+### Déploiement continu (master uniquement)
+
+1. **Version bump** — `standard-version` lit et bumpe la version dans `pubspec.yaml` selon les [Conventional Commits](https://conventionalcommits.org), génère le `CHANGELOG.md`, crée le tag Git et la release GitHub
+2. **Build Android** — produit un AAB signé avec la debug key (artefact archivé 30 jours)
+3. **Build iOS** — compile sans signature de distribution (artefact archivé 30 jours)
+
+> Pour publier sur le Play Store ou l'App Store, il faudra configurer les secrets de signing et ajouter une étape de déploiement.
 
 ## Project structure details
 
