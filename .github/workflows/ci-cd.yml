@@ -21,6 +21,11 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Créer firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
+
       - name: Installer les dépendances
         run: flutter pub get
 
@@ -105,6 +110,11 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Créer firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
+
       - name: Installer les dépendances
         run: flutter pub get
 
@@ -132,6 +142,11 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Créer firebase_options.dart
+        run: echo "$FIREBASE_OPTIONS" > lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS }}
 
       - name: Installer les dépendances
         run: flutter pub get
