@@ -16,10 +16,11 @@ class BankAccountRepository {
     return BankAccount.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<BankAccount> updateAccount(String id, {String? name, double? balance}) async {
+  Future<BankAccount> updateAccount(String id, {String? name, double? balance, int? sortOrder}) async {
     final response = await _api.dio.patch('/bank-accounts/$id', data: {
       if (name != null) 'name': name,
       if (balance != null) 'balance': balance,
+      if (sortOrder != null) 'sortOrder': sortOrder,
     });
     return BankAccount.fromJson(response.data as Map<String, dynamic>);
   }

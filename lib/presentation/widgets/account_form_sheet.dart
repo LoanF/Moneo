@@ -108,7 +108,7 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
                 ],
                 style: const TextStyle(color: AppColors.mainText),
                 decoration: const InputDecoration(
-                  labelText: "Solde de départ",
+                  labelText: "Solde du compte",
                   hintText: "0.00",
                   prefixIcon: Icon(Icons.euro_rounded, color: AppColors.grey1, size: 20),
                   suffixText: "€",

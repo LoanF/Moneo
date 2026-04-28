@@ -44,6 +44,7 @@ class HomeViewModel extends CommonViewModel {
   String get uid => getIt<IAuthService>().currentUser?.uid ?? '';
 
   double get totalBalance => _accounts.fold(0, (sum, acc) => sum + acc.balance);
+  double get totalPointedBalance => _accounts.fold(0, (sum, acc) => sum + acc.pointedBalance);
 
   List<Transaction> get filteredTransactions {
     if (_hideChecked) return _transactions.where((t) => !t.isChecked).toList();
@@ -150,13 +151,15 @@ class HomeViewModel extends CommonViewModel {
     String? categoryId,
     String? paymentMethodId,
     DateTime? date,
+    BankAccount? account,
   }) async {
-    if (_selectedAccount == null) return;
+    final targetAccount = account ?? _selectedAccount;
+    if (targetAccount == null) return;
     final t = Transaction(
       id: _uuid.v4(),
       amount: amount,
       type: type,
-      accountId: _selectedAccount!.id,
+      accountId: targetAccount.id,
       categoryId: categoryId,
       paymentMethodId: paymentMethodId,
       date: date ?? DateTime.now(),
@@ -254,6 +257,24 @@ class HomeViewModel extends CommonViewModel {
       notifyListeners();
     } catch (e) {
       throw handleError(e);
+    }
+  }
+
+  Future<void> reorderAccounts(int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) newIndex--;
+    final reordered = List<BankAccount>.from(_accounts);
+    final item = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, item);
+    _accounts = reordered;
+    notifyListeners();
+
+    try {
+      await Future.wait(reordered.asMap().entries.map(
+        (e) => _accountRepo.updateAccount(e.value.id, sortOrder: e.key),
+      ));
+    } catch (e) {
+      await _refreshAccounts();
+      notifyListeners();
     }
   }
 

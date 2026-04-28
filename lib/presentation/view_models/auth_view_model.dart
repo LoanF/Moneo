@@ -6,6 +6,7 @@ import '../../core/repositories/bank_account_repository.dart';
 import '../../core/repositories/payment_method_repository.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/user_service.dart';
+import '../../core/utils/error_handler.dart';
 import '../../data/models/app_user_model.dart';
 import 'common_view_model.dart';
 
@@ -29,7 +30,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -43,7 +44,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = "Erreur de connexion Google : $e";
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -58,7 +59,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -76,7 +77,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -90,7 +91,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -104,7 +105,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -118,7 +119,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -132,7 +133,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = e.toString();
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -152,7 +153,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = "Erreur mise à jour : $e";
+      errorMessage = handleError(e);
       return false;
     }
   }
@@ -191,7 +192,7 @@ class AuthViewModel extends CommonViewModel {
       return true;
     } catch (e) {
       isLoading = false;
-      errorMessage = "Erreur lors de la configuration : $e";
+      errorMessage = handleError(e);
       return false;
     }
   }

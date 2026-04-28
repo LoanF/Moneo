@@ -80,6 +80,8 @@ class BankAccount {
   final String id;
   final String name;
   final double balance;
+  final double pointedBalance;
+  final int sortOrder;
   final String type;
   final String currency;
 
@@ -87,15 +89,20 @@ class BankAccount {
     required this.id,
     required this.name,
     required this.balance,
+    double? pointedBalance,
+    this.sortOrder = 0,
     this.type = 'checking',
     this.currency = 'EUR',
-  });
+  }) : pointedBalance = pointedBalance ?? balance;
 
   factory BankAccount.fromJson(Map<String, dynamic> json) {
+    final balance = _parseDouble(json['balance']);
     return BankAccount(
       id: json['id'] as String,
       name: json['name'] as String,
-      balance: _parseDouble(json['balance']),
+      balance: balance,
+      pointedBalance: json['pointedBalance'] != null ? _parseDouble(json['pointedBalance']) : balance,
+      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
       type: json['type'] as String? ?? 'checking',
       currency: json['currency'] as String? ?? 'EUR',
     );
