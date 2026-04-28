@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/di.dart';
 import '../../core/notifiers/lock_notifier.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/services/tutorial_service.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/home_view_model.dart';
@@ -127,6 +129,16 @@ class SettingsPage extends StatelessWidget {
                   icon: Icons.notifications_active_rounded,
                   iconColor: Colors.purple,
                   onTap: () => context.push(AppRoutes.notificationsSettings),
+                ),
+                _buildNavigationItem(
+                  label: "Rejouer le tutoriel",
+                  icon: Icons.help_outline_rounded,
+                  iconColor: Colors.amber,
+                  showArrow: false,
+                  onTap: () async {
+                    await getIt<TutorialService>().resetTutorial();
+                    if (context.mounted) context.pop();
+                  },
                 ),
               ]),
 
