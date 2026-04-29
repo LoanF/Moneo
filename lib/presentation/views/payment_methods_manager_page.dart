@@ -102,6 +102,7 @@ IconData paymentMethodTypeIcon(String type) {
     case 'credit': return Icons.credit_card_rounded;
     case 'cash': return Icons.payments_rounded;
     case 'transfer': return Icons.swap_horiz_rounded;
+    case 'cheque': return Icons.edit_document;
     default: return Icons.credit_card_rounded;
   }
 }
@@ -111,6 +112,7 @@ String paymentMethodTypeLabel(String type) {
     case 'credit': return 'Crédit';
     case 'cash': return 'Espèces';
     case 'transfer': return 'Virement';
+    case 'cheque': return 'Chèque';
     default: return 'Débit';
   }
 }
@@ -154,6 +156,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
     ('credit', 'Crédit'),
     ('cash', 'Espèces'),
     ('transfer', 'Virement'),
+    ('cheque', 'Chèque'),
   ];
 
   @override
@@ -214,37 +217,33 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
               const SizedBox(height: 16),
               const Text("Type", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
               const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: AppColors.thirdBackground, borderRadius: BorderRadius.circular(16)),
-                child: Row(
-                  children: _types.map((entry) {
-                    final (value, label) = entry;
-                    final isSelected = _selectedType == value;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedType = value),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.secondaryBackground : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isSelected ? AppColors.mainText : AppColors.grey1,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _types.map((entry) {
+                  final (value, label) = entry;
+                  final isSelected = _selectedType == value;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedType = value),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.mainColor.withValues(alpha: 0.15) : AppColors.thirdBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: isSelected ? Border.all(color: AppColors.mainColor, width: 1.5) : null,
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isSelected ? AppColors.mainColor : AppColors.grey1,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 24),
               SizedBox(

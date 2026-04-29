@@ -150,6 +150,7 @@ class HomeViewModel extends CommonViewModel {
     required String type,
     String? categoryId,
     String? paymentMethodId,
+    String? chequeNumber,
     DateTime? date,
     BankAccount? account,
   }) async {
@@ -162,6 +163,7 @@ class HomeViewModel extends CommonViewModel {
       accountId: targetAccount.id,
       categoryId: categoryId,
       paymentMethodId: paymentMethodId,
+      chequeNumber: chequeNumber,
       date: date ?? DateTime.now(),
       note: title,
     );

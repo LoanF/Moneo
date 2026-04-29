@@ -81,9 +81,26 @@ class TransactionTile extends StatelessWidget {
             ],
           ],
         ),
-        subtitle: Text(
-          DateFormat.yMMMMd().format(transaction.date),
-          style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              DateFormat.yMMMMd().format(transaction.date),
+              style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+            ),
+            if (transaction.chequeNumber != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.edit_document, size: 10, color: AppColors.secondaryText),
+                  const SizedBox(width: 3),
+                  Text(
+                    "Chèque n°${transaction.chequeNumber}",
+                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 11),
+                  ),
+                ],
+              ),
+          ],
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,

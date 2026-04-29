@@ -96,6 +96,7 @@ class _HomePageState extends State<HomePage> {
         targetPosition: _renderBoxPosition(_balanceKey),
         shape: ShapeLightFocus.RRect,
         radius: 20,
+        enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
@@ -113,6 +114,7 @@ class _HomePageState extends State<HomePage> {
         keyTarget: _accountSelectorKey,
         shape: ShapeLightFocus.RRect,
         radius: 24,
+        enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
@@ -130,6 +132,7 @@ class _HomePageState extends State<HomePage> {
         keyTarget: _fabKey,
         shape: ShapeLightFocus.RRect,
         radius: 20,
+        enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.top,
@@ -146,6 +149,7 @@ class _HomePageState extends State<HomePage> {
         identify: "visibility",
         keyTarget: _visibilityKey,
         shape: ShapeLightFocus.Circle,
+        enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
@@ -162,6 +166,7 @@ class _HomePageState extends State<HomePage> {
         identify: "stats",
         keyTarget: _statsKey,
         shape: ShapeLightFocus.Circle,
+        enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
@@ -178,6 +183,7 @@ class _HomePageState extends State<HomePage> {
         identify: "settings",
         keyTarget: _settingsKey,
         shape: ShapeLightFocus.Circle,
+        enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,

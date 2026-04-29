@@ -25,6 +25,7 @@ class TransactionRepository {
       if (t.note != null) 'note': t.note,
       if (t.categoryId != null) 'categoryId': t.categoryId,
       if (t.paymentMethodId != null) 'paymentMethodId': t.paymentMethodId,
+      if (t.chequeNumber != null) 'chequeNumber': t.chequeNumber,
     });
     return Transaction.fromJson(response.data as Map<String, dynamic>);
   }
@@ -38,6 +39,7 @@ class TransactionRepository {
       if (t.note != null) 'note': t.note,
       if (t.categoryId != null) 'categoryId': t.categoryId,
       if (t.paymentMethodId != null) 'paymentMethodId': t.paymentMethodId,
+      'chequeNumber': t.chequeNumber,
     });
     return Transaction.fromJson(response.data as Map<String, dynamic>);
   }
