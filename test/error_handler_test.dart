@@ -64,7 +64,7 @@ void main() {
   });
 
   group('handleError – badResponse', () {
-    Response<dynamic> _response(int statusCode, {Map<String, dynamic>? data}) {
+    Response<dynamic> makeResponse(int statusCode, {Map<String, dynamic>? data}) {
       return Response(
         requestOptions: RequestOptions(path: '/test'),
         statusCode: statusCode,
@@ -72,71 +72,71 @@ void main() {
       );
     }
 
-    DioException _badResponse(int statusCode, {Map<String, dynamic>? data}) {
+    DioException makeBadResponse(int statusCode, {Map<String, dynamic>? data}) {
       return DioException(
         requestOptions: RequestOptions(path: '/test'),
         type: DioExceptionType.badResponse,
-        response: _response(statusCode, data: data),
+        response: makeResponse(statusCode, data: data),
       );
     }
 
     test('400 → Données invalides', () {
-      expect(handleError(_badResponse(400)), 'Données invalides.');
+      expect(handleError(makeBadResponse(400)), 'Données invalides.');
     });
 
     test('401 → Session expirée', () {
-      expect(handleError(_badResponse(401)), 'Session expirée. Reconnectez-vous.');
+      expect(handleError(makeBadResponse(401)), 'Session expirée. Reconnectez-vous.');
     });
 
     test('403 → Accès refusé', () {
-      expect(handleError(_badResponse(403)), 'Accès refusé.');
+      expect(handleError(makeBadResponse(403)), 'Accès refusé.');
     });
 
     test('404 → Ressource introuvable', () {
-      expect(handleError(_badResponse(404)), 'Ressource introuvable.');
+      expect(handleError(makeBadResponse(404)), 'Ressource introuvable.');
     });
 
     test('409 → Un conflit est survenu', () {
-      expect(handleError(_badResponse(409)), 'Un conflit est survenu.');
+      expect(handleError(makeBadResponse(409)), 'Un conflit est survenu.');
     });
 
     test('422 → Données incorrectes', () {
-      expect(handleError(_badResponse(422)), 'Données incorrectes.');
+      expect(handleError(makeBadResponse(422)), 'Données incorrectes.');
     });
 
     test('429 → Trop de tentatives', () {
-      expect(handleError(_badResponse(429)), 'Trop de tentatives. Réessayez dans quelques minutes.');
+      expect(handleError(makeBadResponse(429)), 'Trop de tentatives. Réessayez dans quelques minutes.');
     });
 
     test('500 → Erreur serveur', () {
-      expect(handleError(_badResponse(500)), 'Erreur serveur. Réessayez plus tard.');
+      expect(handleError(makeBadResponse(500)), 'Erreur serveur. Réessayez plus tard.');
     });
 
     test('502 → Erreur serveur', () {
-      expect(handleError(_badResponse(502)), 'Erreur serveur. Réessayez plus tard.');
+      expect(handleError(makeBadResponse(502)), 'Erreur serveur. Réessayez plus tard.');
     });
 
     test('503 → Erreur serveur', () {
-      expect(handleError(_badResponse(503)), 'Erreur serveur. Réessayez plus tard.');
+      expect(handleError(makeBadResponse(503)), 'Erreur serveur. Réessayez plus tard.');
     });
 
     test('code inconnu affiche le code HTTP', () {
-      final result = handleError(_badResponse(418));
+      final result = handleError(makeBadResponse(418));
       expect(result, 'Erreur réseau (418).');
     });
 
     test('message "error" dans le body est retourné directement', () {
-      final result = handleError(_badResponse(400, data: {'error': 'Email déjà utilisé'}));
+      final result = handleError(makeBadResponse(400, data: {'error': 'Email déjà utilisé'}));
       expect(result, 'Email déjà utilisé');
     });
 
     test('message "message" dans le body est retourné directement', () {
-      final result = handleError(_badResponse(422, data: {'message': 'Champ requis manquant'}));
+      final result = handleError(makeBadResponse(422, data: {'message': 'Champ requis manquant'}));
       expect(result, 'Champ requis manquant');
     });
 
     test('body vide tombe sur le code HTTP', () {
-      final result = handleError(_badResponse(400, data: {}));
+      final result = handleError(makeBadResponse(400, data: {}));
       expect(result, 'Données invalides.');
     });
   });
