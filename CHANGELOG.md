@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/LoanF/Moneo/compare/v1.2.0...v1.3.0) (2026-04-29)
+
+
+### Features
+
+* add support for cheque payment method ([a3d2949](https://github.com/LoanF/Moneo/commit/a3d294917051752745dcebe53c52e5fd752e5b76))
+* add tests ([fa540a0](https://github.com/LoanF/Moneo/commit/fa540a0b118a231445e6ec29f64c1919a9f4757f))
+* add tests ([0accab7](https://github.com/LoanF/Moneo/commit/0accab729b505d25f769cdfed6cad496f37532b2))
+* add tests ([158fe42](https://github.com/LoanF/Moneo/commit/158fe42cc467281a5d58dcc3d095e62ff197d72a))
+
 ## [1.2.0](https://github.com/LoanF/Moneo/compare/v1.1.0...v1.2.0) (2026-04-28)
 
 
