@@ -100,7 +100,6 @@ class AuthService implements IAuthService {
   Future<void> signInWithGoogle() async {
     try {
       await _ensureGoogleSignInInitialized();
-      await _googleSignIn.signOut().catchError((_) {});
       final GoogleSignInAccount account = await _googleSignIn.authenticate(scopeHint: ['email', 'profile']);
       final GoogleSignInAuthentication auth = account.authentication;
       final String? idToken = auth.idToken;
@@ -219,15 +218,12 @@ class AuthService implements IAuthService {
 
   @override
   Future<void> signOut() async {
-    try {
-      await getIt<ApiClient>().dio.post('/auth/logout');
-    } catch (_) {}
-    await _storage.deleteAll();
-    await _appUserService.clearUser();
-    try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
+    _appUserService.clearUser();
     _authStreamController.add(null);
+    getIt<ApiClient>().dio.post('/auth/logout').ignore();
+    _storage.delete(key: 'accessToken').catchError((_) {});
+    _storage.delete(key: 'refreshToken').catchError((_) {});
+    _googleSignIn.signOut().catchError((_) {});
   }
 
   @override
@@ -239,11 +235,12 @@ class AuthService implements IAuthService {
       if (data is Map) throw data['error'] ?? 'Erreur lors de la suppression';
       throw 'Erreur lors de la suppression';
     }
-    await _storage.deleteAll();
+    await Future.wait([
+      _storage.delete(key: 'accessToken'),
+      _storage.delete(key: 'refreshToken'),
+      _googleSignIn.signOut().catchError((_) {}),
+    ]);
     await _appUserService.clearUser();
-    try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
     _authStreamController.add(null);
   }
 

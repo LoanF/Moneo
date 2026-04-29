@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1048208899254-bjm98odubnsl31s2o6od39ioh2rq7t1d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lfxtech.moneo",
+            "certificate_hash": "f2336c45ee747d5abae1740a45300148448e50d0"
+          }
+        },
+        {
           "client_id": "1048208899254-e8c15e0dlcg6243snv89rsgh2m30st85.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
