@@ -17,6 +17,7 @@ class Transaction {
   final String accountId;
   final String? categoryId;
   final String? paymentMethodId;
+  final String? chequeNumber;
   final bool isMonthly;
 
   const Transaction({
@@ -29,6 +30,7 @@ class Transaction {
     required this.accountId,
     this.categoryId,
     this.paymentMethodId,
+    this.chequeNumber,
     this.isMonthly = false,
   });
 
@@ -44,6 +46,7 @@ class Transaction {
       accountId: json['accountId'] as String,
       categoryId: json['categoryId'] as String?,
       paymentMethodId: json['paymentMethodId'] as String?,
+      chequeNumber: json['chequeNumber'] as String?,
       isMonthly: note?.startsWith('[Auto]') ?? false,
     );
   }
@@ -60,6 +63,7 @@ class Transaction {
     String? accountId,
     Object? categoryId = _keep,
     Object? paymentMethodId = _keep,
+    Object? chequeNumber = _keep,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -71,6 +75,7 @@ class Transaction {
       accountId: accountId ?? this.accountId,
       categoryId: categoryId == _keep ? this.categoryId : categoryId as String?,
       paymentMethodId: paymentMethodId == _keep ? this.paymentMethodId : paymentMethodId as String?,
+      chequeNumber: chequeNumber == _keep ? this.chequeNumber : chequeNumber as String?,
       isMonthly: isMonthly,
     );
   }

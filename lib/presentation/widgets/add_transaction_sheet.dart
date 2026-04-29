@@ -28,6 +28,7 @@ class AddTransactionSheet extends StatefulWidget {
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
+  final _chequeNumberController = TextEditingController();
 
   bool _isExpense = true;
   bool _isTransfer = false;
@@ -62,6 +63,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     final methods = context.read<HomeViewModel>().paymentMethods;
     try {
       _selectedPaymentMethod = methods.firstWhere((m) => m.id == widget.transaction!.paymentMethodId);
+      _chequeNumberController.text = widget.transaction!.chequeNumber ?? '';
       setState(() {});
     } catch (_) {}
   }
@@ -125,6 +127,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   void dispose() {
     _titleController.dispose();
     _amountController.dispose();
+    _chequeNumberController.dispose();
     super.dispose();
   }
 
@@ -466,6 +469,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     final methods = context.read<HomeViewModel>().paymentMethods;
     if (methods.isEmpty) return const SizedBox.shrink();
 
+    final isCheque = _selectedPaymentMethod?.type == 'cheque';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -481,7 +486,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               final isSelected = _selectedPaymentMethod?.id == method.id;
               return GestureDetector(
                 onTap: () => setState(() {
-                  _selectedPaymentMethod = isSelected ? null : method;
+                  if (isSelected) {
+                    _selectedPaymentMethod = null;
+                    _chequeNumberController.clear();
+                  } else {
+                    _selectedPaymentMethod = method;
+                    if (method.type != 'cheque') _chequeNumberController.clear();
+                  }
                 }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -505,6 +516,21 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             },
           ),
         ),
+        if (isCheque) ...[
+          const SizedBox(height: 16),
+          TextField(
+            controller: _chequeNumberController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: AppColors.mainText),
+            decoration: InputDecoration(
+              hintText: "Numéro de chèque",
+              prefixIcon: const Icon(Icons.edit_document, color: AppColors.grey1),
+              filled: true,
+              fillColor: AppColors.thirdBackground,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -540,6 +566,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               : rawId;
         }
 
+        final chequeNumber = _selectedPaymentMethod?.type == 'cheque'
+            ? (_chequeNumberController.text.trim().isEmpty ? null : _chequeNumberController.text.trim())
+            : null;
+
         if (widget.transaction != null) {
           await homeViewModel.updateTransaction(widget.transaction!.copyWith(
             amount: finalAmount,
@@ -547,6 +577,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             note: _titleController.text,
             categoryId: finalCategoryId,
             paymentMethodId: _selectedPaymentMethod?.id,
+            chequeNumber: chequeNumber,
             date: _selectedDate,
           ));
         } else {
@@ -556,6 +587,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             type: _isExpense ? 'expense' : 'income',
             categoryId: finalCategoryId,
             paymentMethodId: _selectedPaymentMethod?.id,
+            chequeNumber: chequeNumber,
             date: _selectedDate,
             account: _selectedAccount,
           );
