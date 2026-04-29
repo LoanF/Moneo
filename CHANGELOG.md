@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/LoanF/Moneo/compare/v1.3.0...v1.4.0) (2026-04-29)
+
+
+### Features
+
+* configure Google Sign-In and refactor authentication flow ([cca2453](https://github.com/LoanF/Moneo/commit/cca24538f3126b5cf66b6f64d8e597d6ff6dbf23))
+
 ## [1.3.0](https://github.com/LoanF/Moneo/compare/v1.2.0...v1.3.0) (2026-04-29)
 
 
