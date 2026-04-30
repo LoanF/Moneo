@@ -75,20 +75,26 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     final categoryId = widget.transaction!.categoryId!;
 
     try {
-      if (categoryId.startsWith('other_')) {
-        final parentId = categoryId.replaceFirst('other_', '');
-        _selectedParent = categories.firstWhere((c) => c.id == parentId);
-        _selectedSub = null;
-      } else {
-        final currentCat = categories.firstWhere((c) => c.id == categoryId);
+      final currentCat = categoryId.startsWith('other_')
+          ? categories.firstWhere((c) => c.id == categoryId.replaceFirst('other_', ''))
+          : categories.firstWhere((c) => c.id == categoryId);
 
-        if (currentCat.parentId == null) {
-          _selectedParent = currentCat;
-          _selectedSub = null;
-        } else {
-          _selectedParent = categories.firstWhere((c) => c.id == currentCat.parentId);
-          _selectedSub = currentCat;
+      if (currentCat.parentId == null) {
+        _selectedParent = currentCat;
+        final hasSubcategories = categories.any((c) => c.parentId == currentCat.id);
+        if (hasSubcategories) {
+          _selectedSub = Category(
+            id: "other_${currentCat.id}",
+            name: "Autre",
+            parentId: currentCat.id,
+            iconCode: currentCat.iconCode,
+            colorValue: currentCat.colorValue,
+            userId: widget.uid,
+          );
         }
+      } else {
+        _selectedParent = categories.firstWhere((c) => c.id == currentCat.parentId);
+        _selectedSub = currentCat;
       }
       setState(() {});
     } catch (e) {
