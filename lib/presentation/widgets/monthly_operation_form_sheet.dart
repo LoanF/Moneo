@@ -8,7 +8,7 @@ class MonthlyOperationFormSheet extends StatefulWidget {
   final MonthlyPayment? operation;
   final List<BankAccount> accounts;
   final List<Category> categories;
-  final Function(String name, double amount, String type, int day, String accountId, String? categoryId) onSave;
+  final Future<void> Function(String name, double amount, String type, int day, String accountId, String? categoryId) onSave;
 
   const MonthlyOperationFormSheet({
     super.key,
@@ -62,6 +62,17 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
       setState(() {
         if (current.parentId == null) {
           _selectedParent = current;
+          final hasSubcategories = widget.categories.any((c) => c.parentId == current.id);
+          if (hasSubcategories) {
+            _selectedSub = Category(
+              id: "other_${current.id}",
+              name: "Autre",
+              parentId: current.id,
+              iconCode: current.iconCode,
+              colorValue: current.colorValue,
+              userId: widget.uid,
+            );
+          }
         } else {
           _selectedParent = widget.categories.firstWhere((c) => c.id == current.parentId);
           _selectedSub = current;
@@ -300,17 +311,24 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_titleController.text.isEmpty || _selectedAccount == null) return;
     setState(() => _isSubmitting = true);
 
-    widget.onSave(
-      _titleController.text,
-      double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0,
-      _isExpense ? 'expense' : 'income',
-      _dayOfMonth,
-      _selectedAccount!.id,
-      _selectedSub?.id ?? _selectedParent?.id,
-    );
+    try {
+      await widget.onSave(
+        _titleController.text,
+        double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0,
+        _isExpense ? 'expense' : 'income',
+        _dayOfMonth,
+        _selectedAccount!.id,
+        (_selectedSub != null && !_selectedSub!.id.startsWith('other_'))
+            ? _selectedSub!.id
+            : _selectedParent?.id,
+      );
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 }

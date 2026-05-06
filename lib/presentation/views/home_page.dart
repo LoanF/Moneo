@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -59,6 +60,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _showTutorial() async {
+    final animation = ModalRoute.of(context)?.animation;
+
     if (_scrollController.hasClients && _scrollController.offset > 0) {
       await _scrollController.animateTo(
         0,
@@ -66,7 +69,17 @@ class _HomePageState extends State<HomePage> {
         curve: Curves.easeOut,
       );
     }
-    await Future.delayed(const Duration(milliseconds: 300));
+    if (animation != null && animation.status != AnimationStatus.completed) {
+      final completer = Completer<void>();
+      void onStatus(AnimationStatus status) {
+        if (status == AnimationStatus.completed) completer.complete();
+      }
+      animation.addStatusListener(onStatus);
+      await completer.future;
+      animation.removeStatusListener(onStatus);
+    }
+
+    await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
     TutorialCoachMark(
       targets: _buildTargets(),
@@ -83,28 +96,25 @@ class _HomePageState extends State<HomePage> {
     ).show(context: context);
   }
 
-  TargetPosition? _renderBoxPosition(GlobalKey key) {
-    final rb = key.currentContext?.findRenderObject() as RenderBox?;
-    if (rb == null) return null;
-    return TargetPosition(rb.size, rb.localToGlobal(Offset.zero));
-  }
-
   List<TargetFocus> _buildTargets() {
     return [
       TargetFocus(
         identify: "balance",
-        targetPosition: _renderBoxPosition(_balanceKey),
+        keyTarget: _balanceKey,
         shape: ShapeLightFocus.RRect,
         radius: 20,
         enableOverlayTab: true,
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
-            child: _TutorialCard(
-              step: "1 / 6",
-              title: "Solde global",
-              description:
-                  "La somme de tous vos comptes en un coup d'œil.\n\nLe solde « pointé » correspond aux transactions que vous avez vérifiées, utile pour rapprocher votre relevé bancaire.",
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "1 / 6",
+                title: "Solde global",
+                description:
+                    "La somme de tous vos comptes en un coup d'œil.\n\nLe solde « pointé » correspond aux transactions que vous avez vérifiées, utile pour rapprocher votre relevé bancaire.",
+              ),
             ),
           ),
         ],
@@ -118,11 +128,14 @@ class _HomePageState extends State<HomePage> {
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
-            child: _TutorialCard(
-              step: "2 / 6",
-              title: "Vos comptes",
-              description:
-                  "Appuyez sur un compte pour filtrer ses transactions.\n\nMaintenez enfoncé et glissez pour réorganiser l'ordre des cartes.",
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "2 / 6",
+                title: "Vos comptes",
+                description:
+                    "Appuyez sur un compte pour filtrer ses transactions.\n\nMaintenez enfoncé et glissez pour réorganiser l'ordre des cartes.",
+              ),
             ),
           ),
         ],
@@ -136,11 +149,14 @@ class _HomePageState extends State<HomePage> {
         contents: [
           TargetContent(
             align: ContentAlign.top,
-            child: _TutorialCard(
-              step: "3 / 6",
-              title: "Nouvelle opération",
-              description:
-                  "Ajoutez une dépense, un revenu ou un transfert entre comptes.\n\nVous pouvez choisir une catégorie, un moyen de paiement et modifier la date.",
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "3 / 6",
+                title: "Nouvelle opération",
+                description:
+                    "Ajoutez une dépense, un revenu ou un transfert entre comptes.\n\nVous pouvez choisir une catégorie, un moyen de paiement et modifier la date.",
+              ),
             ),
           ),
         ],
@@ -152,12 +168,15 @@ class _HomePageState extends State<HomePage> {
         enableOverlayTab: true,
         contents: [
           TargetContent(
-            align: ContentAlign.bottom,
-            child: _TutorialCard(
-              step: "4 / 6",
-              title: "Pointage",
-              description:
-                  "Glissez une transaction vers la droite pour la pointer (marquée comme vérifiée).\n\nGlissez vers la gauche pour la supprimer.\n\nCe bouton masque ou affiche les transactions déjà pointées.",
+            align: ContentAlign.top,
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "4 / 6",
+                title: "Pointage",
+                description:
+                    "Glissez une transaction vers la droite pour la pointer (marquée comme vérifiée).\n\nGlissez vers la gauche pour la supprimer.\n\nCe bouton masque ou affiche les transactions déjà pointées.",
+              ),
             ),
           ),
         ],
@@ -170,11 +189,14 @@ class _HomePageState extends State<HomePage> {
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
-            child: _TutorialCard(
-              step: "5 / 6",
-              title: "Statistiques",
-              description:
-                  "Visualisez vos dépenses et revenus par catégorie.\n\nSuivez l'évolution mensuelle de votre budget avec des graphiques détaillés.",
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "5 / 6",
+                title: "Statistiques",
+                description:
+                    "Visualisez vos dépenses et revenus par catégorie.\n\nSuivez l'évolution mensuelle de votre budget avec des graphiques détaillés.",
+              ),
             ),
           ),
         ],
@@ -187,11 +209,14 @@ class _HomePageState extends State<HomePage> {
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
-            child: _TutorialCard(
-              step: "6 / 6",
-              title: "Paramètres",
-              description:
-                  "Gérez vos mensualisations (loyer, abonnements...) ajoutées automatiquement chaque mois, ainsi que vos catégories, moyens de paiement et comptes.",
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "6 / 6",
+                title: "Paramètres",
+                description:
+                    "Gérez vos mensualisations (loyer, abonnements...) ajoutées automatiquement chaque mois, ainsi que vos catégories, moyens de paiement et comptes.",
+              ),
             ),
           ),
         ],
@@ -217,7 +242,7 @@ class _HomePageState extends State<HomePage> {
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildGlobalBalanceHeader(context, homeViewModel.totalBalance, homeViewModel.totalPointedBalance),
+          _buildBalanceHeader(context, homeViewModel.totalBalance, homeViewModel.totalPointedBalance),
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
           _buildAccountSelector(homeViewModel),
           SliverToBoxAdapter(
@@ -261,56 +286,51 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildGlobalBalanceHeader(BuildContext context, double balance, double pointedBalance) {
+  Widget _buildBalanceHeader(BuildContext context, double balance, double pointedBalance) {
     final showPointed = (balance - pointedBalance).abs() > 0.005;
-    return SliverAppBar(
-      expandedHeight: showPointed ? 185 : 160,
-      backgroundColor: AppColors.mainBackground,
-      pinned: true,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      actions: [
-        IconButton(
-          key: _statsKey,
-          icon: const Icon(Icons.bar_chart_rounded, color: AppColors.mainText),
-          onPressed: () => context.push(AppRoutes.stats),
-        ),
-        IconButton(
-          key: _settingsKey,
-          icon: const Icon(Icons.settings_outlined, color: AppColors.mainText),
-          onPressed: () => context.push(AppRoutes.settings),
-        ),
-        const SizedBox(width: 8),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          key: _balanceKey,
-          decoration: const BoxDecoration(
-            color: AppColors.secondaryBackground,
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(40),
-              bottomRight: Radius.circular(40),
-            ),
+    final topPadding = MediaQuery.of(context).padding.top;
+    return SliverToBoxAdapter(
+      child: Container(
+        key: _balanceKey,
+        decoration: const BoxDecoration(
+          color: AppColors.secondaryBackground,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(40),
+            bottomRight: Radius.circular(40),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              const Text("Solde total disponible", style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 8),
-              Text(
-                "${balance.toStringAsFixed(2)} €",
-                style: const TextStyle(color: AppColors.mainText, fontSize: 40, fontWeight: FontWeight.w900),
-              ),
-              if (showPointed) ...[
-                const SizedBox(height: 6),
-                Text(
-                  "Dont pointé : ${pointedBalance.toStringAsFixed(2)} €",
-                  style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
+        ),
+        padding: EdgeInsets.fromLTRB(8, topPadding + 4, 8, 24),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  key: _statsKey,
+                  icon: const Icon(Icons.bar_chart_rounded, color: AppColors.mainText),
+                  onPressed: () => context.push(AppRoutes.stats),
+                ),
+                IconButton(
+                  key: _settingsKey,
+                  icon: const Icon(Icons.settings_outlined, color: AppColors.mainText),
+                  onPressed: () => context.push(AppRoutes.settings),
                 ),
               ],
+            ),
+            const Text("Solde total disponible", style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Text(
+              "${balance.toStringAsFixed(2)} €",
+              style: const TextStyle(color: AppColors.mainText, fontSize: 40, fontWeight: FontWeight.w900),
+            ),
+            if (showPointed) ...[
+              const SizedBox(height: 6),
+              Text(
+                "Dont pointé : ${pointedBalance.toStringAsFixed(2)} €",
+                style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
