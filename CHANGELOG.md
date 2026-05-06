@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/LoanF/Moneo/compare/v1.4.0...v1.5.0) (2026-05-06)
+
+
+### Features
+
+* improve UI stability and tutorial experience ([25635b5](https://github.com/LoanF/Moneo/commit/25635b540fc7fd5274a2cb84be1f4b4f043e6844))
+
 ## [1.4.0](https://github.com/LoanF/Moneo/compare/v1.3.0...v1.4.0) (2026-04-29)
 
 
