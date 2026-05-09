@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/themes/app_colors.dart';
 import '../../data/models/models.dart';
 import '../view_models/home_view_model.dart';
+import '../widgets/confirm_dialog.dart';
 
 class PaymentMethodsManagerPage extends StatelessWidget {
   const PaymentMethodsManagerPage({super.key});
@@ -74,26 +75,11 @@ class PaymentMethodsManagerPage extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, PaymentMethod method, HomeViewModel vm) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.secondaryBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Supprimer ?", style: TextStyle(color: AppColors.mainText)),
-        content: Text(
-          'Supprimer "${method.name}" ?',
-          style: const TextStyle(color: AppColors.secondaryText),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Annuler")),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () { vm.deletePaymentMethod(method.id); Navigator.pop(ctx); },
-            child: const Text("Supprimer"),
-          ),
-        ],
-      ),
-    );
+    showConfirmDialog(
+      context,
+      title: "Supprimer le moyen de paiement ?",
+      message: "« ${method.name} » sera supprimé définitivement.",
+    ).then((confirmed) { if (confirmed) vm.deletePaymentMethod(method.id); });
   }
 }
 

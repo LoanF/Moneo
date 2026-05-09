@@ -6,12 +6,14 @@ import '../../core/themes/app_colors.dart';
 class CategoryFormSheet extends StatefulWidget {
   final Category? category;
   final String? parentId;
+  final Category? parentCategory;
   final Function(String name, String iconName, int colorValue) onSave;
 
   const CategoryFormSheet({
     super.key,
     this.category,
     this.parentId,
+    this.parentCategory,
     required this.onSave,
   });
 
@@ -45,9 +47,9 @@ class _CategoryFormSheetState extends State<CategoryFormSheet> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name);
-    _selectedIconName = widget.category?.iconCode ?? _iconNames.first;
+    _selectedIconName = widget.category?.iconCode ?? widget.parentCategory?.iconCode ?? _iconNames.first;
     _selectedColor = Color(
-      widget.category?.colorValue ?? _colors.first.toARGB32(),
+      widget.category?.colorValue ?? widget.parentCategory?.colorValue ?? _colors.first.toARGB32(),
     );
   }
 

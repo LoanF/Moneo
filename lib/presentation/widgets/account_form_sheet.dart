@@ -85,6 +85,7 @@ class _AccountFormSheetState extends State<AccountFormSheet> {
               TextField(
                 controller: _nameController,
                 autofocus: true,
+                maxLength: 30,
                 style: const TextStyle(color: AppColors.mainText),
                 decoration: const InputDecoration(
                   labelText: "Nom du compte",

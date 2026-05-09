@@ -1,5 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/extensions/string_extensions.dart';
 import '../../core/helpers/icon_helper.dart';
@@ -29,6 +29,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final _chequeNumberController = TextEditingController();
+  late TextEditingController _dateController;
 
   bool _isExpense = true;
   bool _isTransfer = false;
@@ -44,11 +45,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   void initState() {
     super.initState();
     _selectedAccount = widget.selectedAccount;
+    _dateController = TextEditingController(text: _formatDate(_selectedDate));
     if (widget.transaction != null) {
       _titleController.text = widget.transaction!.note ?? "";
       _amountController.text = widget.transaction!.amount.abs().toStringAsFixed(2);
       _isExpense = widget.transaction!.amount < 0;
       _selectedDate = widget.transaction!.date;
+      _dateController.text = _formatDate(_selectedDate);
       _isTransfer = widget.transaction!.type == 'transfer';
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -102,12 +105,46 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     }
   }
 
+  void _setDefaultChequeNumber() {
+    if (_chequeNumberController.text.isNotEmpty) return;
+    final transactions = context.read<HomeViewModel>().transactions;
+    final numbers = transactions
+        .where((t) => t.chequeNumber != null)
+        .map((t) => int.tryParse(t.chequeNumber!))
+        .whereType<int>()
+        .toList();
+    if (numbers.isEmpty) return;
+    _chequeNumberController.text = (numbers.reduce((a, b) => a > b ? a : b) + 1).toString();
+  }
+
+  static String _formatDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  static DateTime _endOfMonth() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month + 1, 0);
+  }
+
+  void _onDateTextChanged(String value) {
+    if (value.length != 10) return;
+    try {
+      final parts = value.split('/');
+      final parsed = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+      if (parsed.isAfter(DateTime(1999)) && !parsed.isAfter(_endOfMonth())) {
+        setState(() => _selectedDate = parsed);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _selectDate() async {
+    final lastDay = _endOfMonth();
+    final initial = _selectedDate.isAfter(lastDay) ? lastDay : _selectedDate;
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: initial,
       firstDate: DateTime(2000),
-      lastDate: DateTime(DateTime.now().year + 1),
+      lastDate: lastDay,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -122,9 +159,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         );
       },
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null) {
       setState(() {
         _selectedDate = picked;
+        _dateController.text = _formatDate(picked);
       });
     }
   }
@@ -134,6 +172,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     _titleController.dispose();
     _amountController.dispose();
     _chequeNumberController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -177,6 +216,16 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 autofocus: widget.transaction != null ? false : true,
                 textAlign: TextAlign.center,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    final text = newValue.text.replaceAll(',', '.');
+                    if (RegExp(r'^\d*\.?\d{0,2}$').hasMatch(text)) {
+                      return newValue.copyWith(text: text, selection: newValue.selection);
+                    }
+                    return oldValue;
+                  }),
+                ],
                 style: TextStyle(
                   color: _isTransfer ? Colors.blueAccent : (_isExpense ? AppColors.mainColor : AppColors.primaryGreen),
                   fontSize: 48,
@@ -226,26 +275,22 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              InkWell(
-                onTap: _selectDate,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.thirdBackground,
-                    borderRadius: BorderRadius.circular(16),
+              TextField(
+                controller: _dateController,
+                keyboardType: TextInputType.number,
+                onChanged: _onDateTextChanged,
+                inputFormatters: [_DateInputFormatter()],
+                style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: "JJ/MM/AAAA",
+                  prefixIcon: const Icon(Icons.calendar_today_rounded, color: AppColors.grey1, size: 20),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.edit_calendar_rounded, color: AppColors.mainColor, size: 20),
+                    onPressed: _selectDate,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today_rounded, color: AppColors.grey1, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        DateFormat.yMMMMd().format(_selectedDate),
-                        style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w500),
-                      ),
-                      const Spacer(),
-                      const Icon(Icons.edit_calendar_rounded, color: AppColors.mainColor, size: 20),
-                    ],
-                  ),
+                  filled: true,
+                  fillColor: AppColors.thirdBackground,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
               ),
               const SizedBox(height: 16),
@@ -491,15 +536,20 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               final method = methods[i];
               final isSelected = _selectedPaymentMethod?.id == method.id;
               return GestureDetector(
-                onTap: () => setState(() {
-                  if (isSelected) {
-                    _selectedPaymentMethod = null;
-                    _chequeNumberController.clear();
-                  } else {
-                    _selectedPaymentMethod = method;
-                    if (method.type != 'cheque') _chequeNumberController.clear();
+                onTap: () {
+                  setState(() {
+                    if (isSelected) {
+                      _selectedPaymentMethod = null;
+                      _chequeNumberController.clear();
+                    } else {
+                      _selectedPaymentMethod = method;
+                      if (method.type != 'cheque') _chequeNumberController.clear();
+                    }
+                  });
+                  if (!isSelected && method.type == 'cheque') {
+                    _setDefaultChequeNumber();
                   }
-                }),
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.only(right: 10),
@@ -556,11 +606,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         final others = widget.accounts.where((a) => a.id != _selectedAccount.id).toList();
         final target = _targetAccount ?? (others.isNotEmpty ? others.first : null);
         if (target == null) return;
+        if (widget.transaction != null) {
+          await homeViewModel.deleteTransaction(widget.transaction!);
+        }
         await homeViewModel.addTransfer(
           sourceAccount: _selectedAccount,
           targetAccount: target,
           title: _titleController.text.isEmpty ? "Transfert" : _titleController.text,
           amount: amount,
+          date: _selectedDate,
         );
       } else {
         final finalAmount = _isExpense ? -amount : amount;
@@ -612,5 +666,25 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         );
       }
     }
+  }
+}
+
+class _DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll('/', '');
+    if (digits.length > 8) return oldValue;
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 4) buffer.write('/');
+      buffer.write(digits[i]);
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
   }
 }

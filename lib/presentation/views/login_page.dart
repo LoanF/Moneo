@@ -222,7 +222,7 @@ class _LoginPageState extends State<LoginPage> {
     final success = await vm.loginWithGoogle();
     if (!context.mounted) return;
     if (!success) {
-      _showError(context, vm.errorMessage ?? "Erreur");
+      _showError(context, vm.errorMessage ?? "Connexion Google impossible");
       return;
     }
     _navigateAfterAuth(context, vm);

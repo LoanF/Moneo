@@ -22,6 +22,16 @@ class CategoryRepository {
     return Category.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<Category> updateCategory(Category category) async {
+    final response = await _api.dio.put('/categories/${category.id}', data: {
+      'name': category.name,
+      'iconCode': category.iconCode,
+      'colorValue': category.colorValue,
+      if (category.parentId != null) 'parentId': category.parentId,
+    });
+    return Category.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<void> deleteCategory(String id) async {
     await _api.dio.delete('/categories/$id');
   }

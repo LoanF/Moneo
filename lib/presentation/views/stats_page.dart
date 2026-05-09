@@ -5,6 +5,107 @@ import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/stats_view_model.dart';
 
+class _MonthPickerDialog extends StatefulWidget {
+  final DateTime selected;
+  final void Function(DateTime) onSelect;
+
+  const _MonthPickerDialog({required this.selected, required this.onSelect});
+
+  @override
+  State<_MonthPickerDialog> createState() => _MonthPickerDialogState();
+}
+
+class _MonthPickerDialogState extends State<_MonthPickerDialog> {
+  late int _year;
+  static const _months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+  @override
+  void initState() {
+    super.initState();
+    _year = widget.selected.year;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    return Dialog(
+      backgroundColor: AppColors.secondaryBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded, color: AppColors.mainText),
+                  onPressed: () => setState(() => _year--),
+                ),
+                Text(
+                  '$_year',
+                  style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w800, fontSize: 18),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.chevron_right_rounded,
+                    color: _year < now.year ? AppColors.mainText : AppColors.grey1,
+                  ),
+                  onPressed: _year < now.year ? () => setState(() => _year++) : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                childAspectRatio: 1.6,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: 12,
+              itemBuilder: (_, i) {
+                final month = i + 1;
+                final isFuture = _year == now.year && month > now.month;
+                final isSelected = _year == widget.selected.year && month == widget.selected.month;
+                return GestureDetector(
+                  onTap: isFuture ? null : () => widget.onSelect(DateTime(_year, month)),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.mainColor
+                          : AppColors.thirdBackground,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _months[i],
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : isFuture
+                                ? AppColors.grey1
+                                : AppColors.mainText,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 4),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
 
@@ -107,12 +208,22 @@ class _StatsPageState extends State<StatsPage> {
             icon: const Icon(Icons.chevron_left_rounded, color: AppColors.mainText, size: 28),
             onPressed: vm.previousMonth,
           ),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.mainText,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+          GestureDetector(
+            onTap: () => _showMonthPicker(context, vm),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.mainText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.arrow_drop_down_rounded, color: AppColors.mainText, size: 22),
+              ],
             ),
           ),
           IconButton(
@@ -124,6 +235,19 @@ class _StatsPageState extends State<StatsPage> {
             onPressed: vm.canGoNext ? vm.nextMonth : null,
           ),
         ],
+      ),
+    );
+  }
+
+  void _showMonthPicker(BuildContext context, StatsViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (_) => _MonthPickerDialog(
+        selected: vm.selectedMonth,
+        onSelect: (month) {
+          vm.jumpToMonth(month);
+          Navigator.pop(context);
+        },
       ),
     );
   }

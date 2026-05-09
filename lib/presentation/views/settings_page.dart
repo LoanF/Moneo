@@ -9,6 +9,7 @@ import '../../core/services/tutorial_service.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/auth_view_model.dart';
 import '../view_models/home_view_model.dart';
+import '../widgets/confirm_dialog.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -305,26 +306,35 @@ class SettingsPage extends StatelessWidget {
     const options = [0, 1, 5, 15, 30];
     showDialog<int>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => Dialog(
         backgroundColor: AppColors.secondaryBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Verrouillage automatique', style: TextStyle(color: AppColors.mainText)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: options.map((minutes) {
-            final selected = lockNotifier.autoLockMinutes == minutes;
-            return ListTile(
-              title: Text(
-                _formatTimeout(minutes),
-                style: TextStyle(
-                  color: selected ? AppColors.mainColor : AppColors.mainText,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                ),
-              ),
-              trailing: selected ? const Icon(Icons.check_rounded, color: AppColors.mainColor) : null,
-              onTap: () => Navigator.pop(ctx, minutes),
-            );
-          }).toList(),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Verrouillage automatique',
+                  style: TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w800, fontSize: 17)),
+              const SizedBox(height: 8),
+              ...options.map((minutes) {
+                final selected = lockNotifier.autoLockMinutes == minutes;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    _formatTimeout(minutes),
+                    style: TextStyle(
+                      color: selected ? AppColors.mainColor : AppColors.mainText,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: selected ? const Icon(Icons.check_rounded, color: AppColors.mainColor) : null,
+                  onTap: () => Navigator.pop(ctx, minutes),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     ).then((minutes) {
@@ -333,76 +343,44 @@ class SettingsPage extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context, AuthViewModel viewModel) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.secondaryBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Déconnexion", style: TextStyle(color: AppColors.mainText)),
-        content: const Text(
-            "Voulez-vous vraiment quitter Moneo ?",
-            style: TextStyle(color: AppColors.secondaryText)
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Rester", style: TextStyle(color: AppColors.mainText))
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () async {
-              Navigator.pop(context);
-              context.read<HomeViewModel>().clear();
-              await viewModel.logout();
-              if (context.mounted) context.go(AppRoutes.login);
-            },
-            child: const Text("Se déconnecter"),
-          ),
-        ],
-      ),
-    );
+    showConfirmDialog(
+      context,
+      title: "Se déconnecter ?",
+      message: "Voulez-vous vraiment quitter Moneo ?",
+      confirmLabel: "Déconnecter",
+      cancelLabel: "Rester",
+      icon: Icons.power_settings_new_rounded,
+      confirmColor: AppColors.error,
+    ).then((confirmed) async {
+      if (!confirmed) return;
+      context.read<HomeViewModel>().clear();
+      await viewModel.logout();
+      if (context.mounted) context.go(AppRoutes.login);
+    });
   }
 
   void _showDeleteAccountDialog(BuildContext context, AuthViewModel viewModel) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.secondaryBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Supprimer le compte ?", style: TextStyle(color: AppColors.mainText)),
-        content: const Text(
-          "Cette action est irréversible. Toutes vos données (comptes, transactions, catégories) seront définitivement supprimées.",
-          style: TextStyle(color: AppColors.secondaryText),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Annuler", style: TextStyle(color: AppColors.mainText)),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              context.read<HomeViewModel>().clear();
-              final success = await viewModel.deleteAccount();
-              if (context.mounted) {
-                if (success) {
-                  context.go(AppRoutes.login);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(viewModel.errorMessage ?? "Erreur lors de la suppression"),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text("Supprimer définitivement"),
-          ),
-        ],
-      ),
-    );
+    showConfirmDialog(
+      context,
+      title: "Supprimer le compte ?",
+      message: "Cette action est irréversible. Toutes vos données (comptes, transactions, catégories) seront définitivement supprimées.",
+      confirmLabel: "Supprimer",
+      icon: Icons.delete_forever_rounded,
+    ).then((confirmed) async {
+      if (!confirmed) return;
+      context.read<HomeViewModel>().clear();
+      final success = await viewModel.deleteAccount();
+      if (context.mounted) {
+        if (success) {
+          context.go(AppRoutes.login);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(viewModel.errorMessage ?? "Erreur lors de la suppression"),
+            backgroundColor: AppColors.error,
+          ));
+        }
+      }
+    });
   }
 
   ImageProvider _getProfileImage(String? url, String? email) {

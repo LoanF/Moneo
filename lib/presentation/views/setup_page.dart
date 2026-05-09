@@ -26,6 +26,8 @@ class _SetupPageState extends State<SetupPage> {
     {'name': 'Espèces', 'type': 'cash'},
     {'name': 'Carte Bancaire', 'type': 'debit'},
     {'name': 'Virement', 'type': 'transfer'},
+    {'name': 'Chèque', 'type': 'cheque'},
+    {'name': 'Crédit', 'type': 'credit'},
   ];
 
   void _completeSetup() async {
@@ -133,9 +135,18 @@ class _SetupPageState extends State<SetupPage> {
                 ),
                 title: Text(_accounts[index]['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text("${_accounts[index]['balance'].toStringAsFixed(2)} €"),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                  onPressed: () => setState(() => _accounts.removeAt(index)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, color: AppColors.mainColor),
+                      onPressed: () => _showAddAccountDialog(editIndex: index),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                      onPressed: () => setState(() => _accounts.removeAt(index)),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -146,7 +157,7 @@ class _SetupPageState extends State<SetupPage> {
 
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: _showAddAccountDialog,
+            onPressed: () => _showAddAccountDialog(),
             icon: const Icon(Icons.add),
             label: const Text("Ajouter un compte bancaire"),
           ),
@@ -275,61 +286,174 @@ class _SetupPageState extends State<SetupPage> {
     );
   }
 
-  void _showAddAccountDialog() {
-    final nameController = TextEditingController();
-    final balanceController = TextEditingController();
-
-    showDialog(
+  void _showAddAccountDialog({int? editIndex}) {
+    final existing = editIndex != null ? _accounts[editIndex] : null;
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Ajouter un compte", style: TextStyle(fontSize: 20)),
-        backgroundColor: AppColors.secondaryBackground,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "Nom (ex: Compte Courant)", labelStyle: TextStyle(fontSize: 13)),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: balanceController,
-              decoration: const InputDecoration(labelText: "Solde initial (€)", suffixText: "€", labelStyle: TextStyle(fontSize: 13)),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _AccountFormSheet(
+        initialName: existing?['name'] ?? '',
+        initialBalance: existing != null ? (existing['balance'] as double).toStringAsFixed(2) : '',
+        isEdit: editIndex != null,
+        onSave: (name, balance) {
+          setState(() {
+            final data = {'name': name, 'balance': balance};
+            if (editIndex != null) {
+              _accounts[editIndex] = data;
+            } else {
+              _accounts.add(data);
+            }
+          });
+        },
+      ),
+    );
+  }
+}
+
+class _AccountFormSheet extends StatefulWidget {
+  final String initialName;
+  final String initialBalance;
+  final bool isEdit;
+  final void Function(String name, double balance) onSave;
+
+  const _AccountFormSheet({
+    required this.initialName,
+    required this.initialBalance,
+    required this.isEdit,
+    required this.onSave,
+  });
+
+  @override
+  State<_AccountFormSheet> createState() => _AccountFormSheetState();
+}
+
+class _AccountFormSheetState extends State<_AccountFormSheet> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _balanceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _balanceController = TextEditingController(text: widget.initialBalance);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _balanceController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+    final balance = double.tryParse(_balanceController.text.replaceAll(',', '.')) ?? 0.0;
+    widget.onSave(name, balance);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      decoration: const BoxDecoration(
+        color: AppColors.secondaryBackground,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.thirdBackground,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                widget.isEdit ? "Modifier le compte" : "Ajouter un compte",
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppColors.mainText),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _nameController,
+                autofocus: true,
+                maxLength: 30,
+                style: const TextStyle(color: AppColors.mainText),
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  hintText: "Nom (ex: Compte Courant)",
+                  prefixIcon: const Icon(Icons.account_balance_outlined, color: AppColors.grey1),
+                  filled: true,
+                  fillColor: AppColors.thirdBackground,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.mainColor, width: 1.5),
+                  ),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _balanceController,
+                style: const TextStyle(color: AppColors.mainText),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                   TextInputFormatter.withFunction((oldValue, newValue) {
                     final newText = newValue.text.replaceAll(',', '.');
                     if (RegExp(r'^\d*\.?\d{0,2}$').hasMatch(newText)) {
-                      return newValue.copyWith(
-                        text: newText,
-                        selection: newValue.selection,
-                      );
+                      return newValue.copyWith(text: newText, selection: newValue.selection);
                     }
-
                     return oldValue;
                   }),
                 ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Annuler")),
-          FilledButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                setState(() => _accounts.add({
-                  'name': nameController.text,
-                  'balance': double.tryParse(balanceController.text) ?? 0.0
-                }));
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("Ajouter"),
+                decoration: InputDecoration(
+                  hintText: "Solde initial",
+                  prefixIcon: const Icon(Icons.euro_rounded, color: AppColors.grey1),
+                  suffixText: "€",
+                  filled: true,
+                  fillColor: AppColors.thirdBackground,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.mainColor, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 56,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.mainColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: _submit,
+                  child: Text(
+                    widget.isEdit ? "Enregistrer" : "Ajouter",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
-
 }

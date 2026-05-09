@@ -32,6 +32,26 @@ class MonthlyPaymentRepository {
     return MonthlyPayment.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<MonthlyPayment> updateMonthlyPayment({
+    required String id,
+    required String name,
+    required double amount,
+    required String type,
+    required int dayOfMonth,
+    required String accountId,
+    String? categoryId,
+  }) async {
+    final response = await _api.dio.patch('/monthly-payments/$id', data: {
+      'name': name,
+      'amount': amount,
+      'type': type,
+      'dayOfMonth': dayOfMonth,
+      'accountId': accountId,
+      'categoryId': categoryId,
+    });
+    return MonthlyPayment.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<void> deleteMonthlyPayment(String id) async {
     await _api.dio.delete('/monthly-payments/$id');
   }
