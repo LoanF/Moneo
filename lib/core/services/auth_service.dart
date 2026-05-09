@@ -10,6 +10,8 @@ import '../interceptor/api_client.dart';
 import '../notifiers/lock_notifier.dart';
 import 'user_service.dart';
 
+class GoogleSignInCancelledException implements Exception {}
+
 abstract class IAuthService {
   Stream<AppUser?> get authStateChanges;
   Future<void> signInWithEmail(String email, String password);
@@ -107,8 +109,14 @@ class AuthService implements IAuthService {
       final response = await _dio.post('/auth/google', data: {'idToken': idToken});
       await _handleAuthResponse(response.data);
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) throw 'Connexion Google annulée';
-      throw 'Erreur de connexion Google';
+      switch (e.code) {
+        case GoogleSignInExceptionCode.canceled:
+          throw GoogleSignInCancelledException();
+        case GoogleSignInExceptionCode.providerConfigurationError:
+          throw 'Google Sign-In non configuré. Vérifiez le SHA-1 dans Firebase Console.';
+        default:
+          throw 'Erreur de connexion Google (${e.code.name})';
+      }
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map) throw data['error'] ?? 'Erreur de connexion Google';

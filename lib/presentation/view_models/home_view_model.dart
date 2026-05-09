@@ -211,6 +211,7 @@ class HomeViewModel extends CommonViewModel {
     required BankAccount targetAccount,
     required double amount,
     String? title,
+    DateTime? date,
   }) async {
     try {
       await _transactionRepo.addTransfer(
@@ -218,6 +219,7 @@ class HomeViewModel extends CommonViewModel {
         toAccountId: targetAccount.id,
         amount: amount,
         note: title ?? 'Transfert',
+        date: date,
       );
       await Future.wait([_loadTransactions(), _refreshAccounts()]);
       notifyListeners();
@@ -295,7 +297,11 @@ class HomeViewModel extends CommonViewModel {
       parentId: parentId,
     );
     try {
-      await _categoryRepo.createCategory(category);
+      if (id != null) {
+        await _categoryRepo.updateCategory(category);
+      } else {
+        await _categoryRepo.createCategory(category);
+      }
       _categories = await _categoryRepo.fetchCategories();
       notifyListeners();
     } catch (e) {
@@ -325,15 +331,27 @@ class HomeViewModel extends CommonViewModel {
     String? categoryId,
   }) async {
     try {
-      await _monthlyRepo.createMonthlyPayment(
-        id: id ?? _uuid.v4(),
-        name: name,
-        amount: amount,
-        type: type,
-        dayOfMonth: dayOfMonth,
-        accountId: accountId,
-        categoryId: categoryId,
-      );
+      if (id != null) {
+        await _monthlyRepo.updateMonthlyPayment(
+          id: id,
+          name: name,
+          amount: amount,
+          type: type,
+          dayOfMonth: dayOfMonth,
+          accountId: accountId,
+          categoryId: categoryId,
+        );
+      } else {
+        await _monthlyRepo.createMonthlyPayment(
+          id: _uuid.v4(),
+          name: name,
+          amount: amount,
+          type: type,
+          dayOfMonth: dayOfMonth,
+          accountId: accountId,
+          categoryId: categoryId,
+        );
+      }
       _monthlyPayments = await _monthlyRepo.fetchMonthlyPayments();
       notifyListeners();
     } catch (e) {

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../data/models/app_user_model.dart';
 import '../interceptor/api_client.dart';
@@ -5,6 +7,7 @@ import '../interceptor/api_client.dart';
 abstract class IAppUserService {
   Future<void> createUser(AppUser user);
   Future<void> updateUser(AppUser user);
+  Future<String> uploadAvatar(File imageFile);
   Future<AppUser> updateFcmToken(AppUser appUser);
   Future<AppUser?> loadCurrentUser();
   Future<void> clearUser();
@@ -51,6 +54,17 @@ class AppUserService implements IAppUserService {
   @override
   Future<void> setEmailVerified(String userId) async {
     _currentAppUser = _currentAppUser?.copyWith(emailVerified: true);
+  }
+
+  @override
+  Future<String> uploadAvatar(File imageFile) async {
+    final ext = imageFile.path.split('.').last.toLowerCase();
+    final mime = ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
+    final formData = FormData.fromMap({
+      'avatar': await MultipartFile.fromFile(imageFile.path, contentType: DioMediaType.parse(mime)),
+    });
+    final response = await _apiClient.dio.post('/auth/upload-avatar', data: formData);
+    return response.data['url'] as String;
   }
 
   @override

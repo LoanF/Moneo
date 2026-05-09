@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
+import '../services/auth_service.dart';
 
 String handleError(Object e) {
   if (e is DioException) return _fromDio(e);
+  if (e is GoogleSignInCancelledException) return 'Connexion Google annulée';
   final msg = e.toString();
   if (msg.startsWith('Exception: ')) return msg.substring(11);
   return msg;
@@ -28,8 +30,18 @@ String _fromDio(DioException e) {
 String _fromBadResponse(DioException e) {
   final data = e.response?.data;
   if (data is Map) {
-    final msg = data['error'] ?? data['message'];
-    if (msg is String && msg.isNotEmpty) return msg;
+    final raw = data['error'] ?? data['message'];
+    if (raw is String && raw.isNotEmpty) return raw;
+    if (raw is Map) {
+      final issues = raw['issues'];
+      if (issues is List && issues.isNotEmpty) {
+        final first = issues.first;
+        if (first is Map) {
+          final msg = first['message'];
+          if (msg is String && msg.isNotEmpty) return msg;
+        }
+      }
+    }
   }
   switch (e.response?.statusCode) {
     case 400: return 'Données invalides.';

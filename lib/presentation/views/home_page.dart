@@ -12,6 +12,7 @@ import '../../core/routes/app_routes.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/add_transaction_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/transaction_tile.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,13 +24,19 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   final _balanceKey = GlobalKey();
   final _accountSelectorKey = GlobalKey();
   final _fabKey = GlobalKey();
   final _visibilityKey = GlobalKey();
+  final _searchKey = GlobalKey();
   final _statsKey = GlobalKey();
   final _settingsKey = GlobalKey();
+
+  bool _isSearching = false;
+  String _searchQuery = '';
+  final Set<String> _activeFilters = {};
 
   @override
   void initState() {
@@ -110,7 +117,7 @@ class _HomePageState extends State<HomePage> {
             builder: (_, controller) => GestureDetector(
               onTap: controller.next,
               child: _TutorialCard(
-                step: "1 / 6",
+                step: "1 / 7",
                 title: "Solde global",
                 description:
                     "La somme de tous vos comptes en un coup d'œil.\n\nLe solde « pointé » correspond aux transactions que vous avez vérifiées, utile pour rapprocher votre relevé bancaire.",
@@ -131,7 +138,7 @@ class _HomePageState extends State<HomePage> {
             builder: (_, controller) => GestureDetector(
               onTap: controller.next,
               child: _TutorialCard(
-                step: "2 / 6",
+                step: "2 / 7",
                 title: "Vos comptes",
                 description:
                     "Appuyez sur un compte pour filtrer ses transactions.\n\nMaintenez enfoncé et glissez pour réorganiser l'ordre des cartes.",
@@ -152,7 +159,7 @@ class _HomePageState extends State<HomePage> {
             builder: (_, controller) => GestureDetector(
               onTap: controller.next,
               child: _TutorialCard(
-                step: "3 / 6",
+                step: "3 / 7",
                 title: "Nouvelle opération",
                 description:
                     "Ajoutez une dépense, un revenu ou un transfert entre comptes.\n\nVous pouvez choisir une catégorie, un moyen de paiement et modifier la date.",
@@ -172,10 +179,31 @@ class _HomePageState extends State<HomePage> {
             builder: (_, controller) => GestureDetector(
               onTap: controller.next,
               child: _TutorialCard(
-                step: "4 / 6",
+                step: "4 / 7",
                 title: "Pointage",
                 description:
                     "Glissez une transaction vers la droite pour la pointer (marquée comme vérifiée).\n\nGlissez vers la gauche pour la supprimer.\n\nCe bouton masque ou affiche les transactions déjà pointées.",
+              ),
+            ),
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "search",
+        keyTarget: _searchKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 20,
+        enableOverlayTab: true,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (_, controller) => GestureDetector(
+              onTap: controller.next,
+              child: _TutorialCard(
+                step: "5 / 7",
+                title: "Recherche & filtres",
+                description:
+                    "Appuyez sur la loupe pour rechercher une opération par libellé.\n\nDes filtres rapides apparaissent ensuite : filtrez par type (dépense, revenu, transfert), moyen de paiement (CB, chèque…) ou état (mensuel, pointé).",
               ),
             ),
           ),
@@ -192,7 +220,7 @@ class _HomePageState extends State<HomePage> {
             builder: (_, controller) => GestureDetector(
               onTap: controller.next,
               child: _TutorialCard(
-                step: "5 / 6",
+                step: "6 / 7",
                 title: "Statistiques",
                 description:
                     "Visualisez vos dépenses et revenus par catégorie.\n\nSuivez l'évolution mensuelle de votre budget avec des graphiques détaillés.",
@@ -212,7 +240,7 @@ class _HomePageState extends State<HomePage> {
             builder: (_, controller) => GestureDetector(
               onTap: controller.next,
               child: _TutorialCard(
-                step: "6 / 6",
+                step: "7 / 7",
                 title: "Paramètres",
                 description:
                     "Gérez vos mensualisations (loyer, abonnements...) ajoutées automatiquement chaque mois, ainsi que vos catégories, moyens de paiement et comptes.",
@@ -228,6 +256,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     getIt<TutorialService>().showNow.removeListener(_onShowNow);
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -247,27 +276,90 @@ class _HomePageState extends State<HomePage> {
           _buildAccountSelector(homeViewModel),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Transactions",
-                    style: TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    key: _visibilityKey,
-                    onPressed: () => homeViewModel.toggleHideChecked(),
-                    icon: Icon(
-                      homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                      color: homeViewModel.hideChecked ? AppColors.grey1 : AppColors.mainColor,
-                      size: 20,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: _isSearching
+                  ? TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      style: const TextStyle(color: AppColors.mainText),
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher une opération...',
+                        hintStyle: const TextStyle(color: AppColors.grey1),
+                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.grey1, size: 20),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close_rounded, color: AppColors.grey1, size: 20),
+                          onPressed: () => setState(() {
+                            _isSearching = false;
+                            _searchQuery = '';
+                            _searchController.clear();
+                          }),
+                        ),
+                        filled: true,
+                        fillColor: AppColors.secondaryBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Text(
+                            "Transactions",
+                            style: TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Stack(
+                              key: _searchKey,
+                              children: [
+                                IconButton(
+                                  onPressed: () => setState(() => _isSearching = true),
+                                  icon: const Icon(Icons.search_rounded, color: AppColors.mainText, size: 20),
+                                ),
+                                if (_activeFilters.isNotEmpty)
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.mainColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            IconButton(
+                              key: _visibilityKey,
+                              onPressed: () => homeViewModel.toggleHideChecked(),
+                              icon: Icon(
+                                homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                color: homeViewModel.hideChecked ? AppColors.grey1 : AppColors.mainColor,
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
+          if (_isSearching || _activeFilters.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                child: _buildFilterChips(homeViewModel),
+              ),
+            ),
           SliverSafeArea(
             top: false,
             sliver: _buildTransactionList(homeViewModel, categories),
@@ -284,6 +376,90 @@ class _HomePageState extends State<HomePage> {
         icon: const Icon(Icons.add, color: Colors.white),
       ),
     );
+  }
+
+  static const _filterDefs = [
+    ('expense',  'Dépenses',   Icons.arrow_upward_rounded,       AppColors.primaryRed),
+    ('income',   'Revenus',    Icons.arrow_downward_rounded,     AppColors.primaryGreen),
+    ('transfer', 'Transferts', Icons.swap_horiz_rounded,         Colors.blueAccent),
+    ('cheque',   'Chèque',     Icons.edit_document,              Colors.brown),
+    ('card',     'CB / Carte', Icons.credit_card_rounded,        Colors.purple),
+    ('monthly',  'Mensuel',    Icons.calendar_month_rounded,     AppColors.mainColor),
+    ('checked',  'Pointé',     Icons.check_circle_outline_rounded, AppColors.primaryGreen),
+  ];
+
+  Widget _buildFilterChips(HomeViewModel vm) {
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: _filterDefs.map((def) {
+          final (id, label, icon, color) = def;
+          final active = _activeFilters.contains(id);
+          return GestureDetector(
+            onTap: () => setState(() {
+              if (active) { _activeFilters.remove(id); } else { _activeFilters.add(id); }
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: active ? color.withValues(alpha: 0.13) : AppColors.secondaryBackground,
+                borderRadius: BorderRadius.circular(20),
+                border: active ? Border.all(color: color, width: 1.5) : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 13, color: active ? color : AppColors.grey1),
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: active ? color : AppColors.grey1,
+                      fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  List<Transaction> _applyFilters(List<Transaction> transactions, HomeViewModel vm) {
+    var result = transactions;
+
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      result = result.where((t) => (t.note ?? '').toLowerCase().contains(query)).toList();
+    }
+
+    if (_activeFilters.isEmpty) return result;
+
+    return result.where((t) {
+      for (final filter in _activeFilters) {
+        switch (filter) {
+          case 'expense':  if (t.type == 'expense') return true;
+          case 'income':   if (t.type == 'income') return true;
+          case 'transfer': if (t.type == 'transfer') return true;
+          case 'cheque':   if (t.chequeNumber != null) return true;
+          case 'card':
+            if (t.paymentMethodId != null) {
+              final m = vm.paymentMethods.where((m) => m.id == t.paymentMethodId).firstOrNull;
+              if (m != null && (m.type == 'credit' || m.type == 'debit')) return true;
+            }
+          case 'monthly': if (t.isMonthly) return true;
+          case 'checked': if (t.isChecked) return true;
+        }
+      }
+      return false;
+    }).toList();
   }
 
   Widget _buildBalanceHeader(BuildContext context, double balance, double pointedBalance) {
@@ -404,7 +580,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTransactionList(HomeViewModel vm, List<Category> categories) {
-    final transactions = vm.filteredTransactions;
+    final transactions = _applyFilters(vm.filteredTransactions, vm);
 
     if (vm.isLoading && transactions.isEmpty) {
       return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
@@ -504,22 +680,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<bool?> _showDeleteConfirmation(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.secondaryBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Supprimer ?", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text("Cette action est irréversible."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Annuler")),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryRed),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Supprimer"),
-          ),
-        ],
-      ),
+    return showConfirmDialog(
+      context,
+      title: "Supprimer la transaction ?",
+      message: "Cette action est irréversible.",
     );
   }
 

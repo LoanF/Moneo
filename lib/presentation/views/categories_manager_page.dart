@@ -5,6 +5,7 @@ import '../../core/themes/app_colors.dart';
 import '../../data/models/models.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/category_form_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 
 class CategoriesManagerPage extends StatelessWidget {
   const CategoriesManagerPage({super.key});
@@ -114,13 +115,15 @@ class CategoriesManagerPage extends StatelessWidget {
       builder: (context) => CategoryFormSheet(
         category: category,
         parentId: parent?.id,
+        parentCategory: parent,
         onSave: (name, iconName, color) {
+          final parentId = parent?.id ?? category?.parentId;
           context.read<HomeViewModel>().saveCategory(
             id: category?.id,
             name: name,
             iconCode: iconName,
-            colorValue: color,
-            parentId: parent?.id ?? category?.parentId,
+            colorValue: parentId != null ? (parent?.colorValue ?? color) : color,
+            parentId: parentId,
           );
         },
       ),
@@ -128,17 +131,14 @@ class CategoriesManagerPage extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, Category category, List<Category> subCategories, HomeViewModel vm) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.secondaryBackground,
-        title: const Text("Supprimer ?"),
-        content: Text(subCategories.isNotEmpty ? "Cela supprimera aussi les ${subCategories.length} sous-catégories." : "Confirmer la suppression ?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Annuler")),
-          FilledButton(onPressed: () { vm.deleteCategory(category); Navigator.pop(context); }, child: const Text("Supprimer")),
-        ],
-      ),
-    );
+    final msg = subCategories.isNotEmpty
+        ? "Les ${subCategories.length} sous-catégorie${subCategories.length > 1 ? 's' : ''} associée${subCategories.length > 1 ? 's' : ''} seront également supprimées."
+        : "Cette catégorie sera supprimée définitivement.";
+    showConfirmDialog(
+      context,
+      title: "Supprimer la catégorie ?",
+      message: msg,
+      icon: Icons.delete_outline_rounded,
+    ).then((confirmed) { if (confirmed) vm.deleteCategory(category); });
   }
 }

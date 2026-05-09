@@ -144,12 +144,29 @@ class AuthViewModel extends CommonViewModel {
     try {
       final user = _authService.currentUser;
       if (user == null) throw Exception("Utilisateur non connecté");
+
+      String? newPhotoUrl;
+      String? uploadError;
+      if (newImageFile != null) {
+        try {
+          newPhotoUrl = await _appUserService.uploadAvatar(newImageFile);
+        } catch (e) {
+          uploadError = handleError(e);
+        }
+      }
+
       final updatedAppUser = user.copyWith(
         username: newName.isNotEmpty ? newName : user.username,
+        photoUrl: newPhotoUrl,
       );
       await _appUserService.updateUser(updatedAppUser);
       getIt<AuthNotifier>().refreshProfile(updatedAppUser);
+
       isLoading = false;
+      if (uploadError != null) {
+        errorMessage = "Profil mis à jour, mais la photo n'a pas pu être uploadée : $uploadError";
+        return false;
+      }
       return true;
     } catch (e) {
       isLoading = false;

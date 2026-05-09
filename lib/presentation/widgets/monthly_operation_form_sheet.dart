@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../data/models/models.dart';
 import '../../core/helpers/icon_helper.dart';
 import '../../core/themes/app_colors.dart';
@@ -9,7 +10,6 @@ class MonthlyOperationFormSheet extends StatefulWidget {
   final List<BankAccount> accounts;
   final List<Category> categories;
   final Future<void> Function(String name, double amount, String type, int day, String accountId, String? categoryId) onSave;
-
   const MonthlyOperationFormSheet({
     super.key,
     required this.uid,
@@ -116,9 +116,9 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
                 ),
               ),
               Text(
-                  widget.operation == null ? "Nouvelle mensualisation" : "Modifier la mensualisation",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.w800)
+                widget.operation == null ? "Nouvelle mensualisation" : "Modifier la mensualisation",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.mainText, fontSize: 18, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 24),
 
@@ -138,6 +138,16 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
                 controller: _amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    final text = newValue.text.replaceAll(',', '.');
+                    if (RegExp(r'^\d*\.?\d{0,2}$').hasMatch(text)) {
+                      return newValue.copyWith(text: text, selection: newValue.selection);
+                    }
+                    return oldValue;
+                  }),
+                ],
                 style: TextStyle(
                     color: _isExpense ? AppColors.mainColor : AppColors.primaryGreen,
                     fontSize: 32,
@@ -226,7 +236,7 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
         ? []
         : widget.categories.where((c) => c.parentId == _selectedParent!.id).toList();
 
-    if (_selectedParent != null) {
+    if (_selectedParent != null && subCats.isNotEmpty) {
       subCats.add(Category(
         id: "other_${_selectedParent!.id}",
         name: "Autre",
@@ -245,6 +255,8 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
         _buildHorizontalCategoryList(mainCats, true),
         if (subCats.isNotEmpty) ...[
           const SizedBox(height: 20),
+          const Text("Sous-catégorie", style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(height: 12),
           _buildHorizontalCategoryList(subCats, false),
         ],
       ],
@@ -263,8 +275,19 @@ class _MonthlyOperationFormSheetState extends State<MonthlyOperationFormSheet> {
           return GestureDetector(
             onTap: () => setState(() {
               if (isParentList) {
+                if (_selectedParent?.id == cat.id) return;
                 _selectedParent = cat;
-                _selectedSub = null;
+                final hasSubs = widget.categories.any((c) => c.parentId == cat.id);
+                _selectedSub = hasSubs
+                    ? Category(
+                        id: "other_${cat.id}",
+                        name: "Autre",
+                        parentId: cat.id,
+                        iconCode: cat.iconCode,
+                        colorValue: cat.colorValue,
+                        userId: widget.uid,
+                      )
+                    : null;
               } else {
                 _selectedSub = (_selectedSub?.id == cat.id) ? null : cat;
               }

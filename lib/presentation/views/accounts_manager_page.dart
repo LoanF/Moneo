@@ -4,6 +4,7 @@ import '../../core/themes/app_colors.dart';
 import '../../data/models/models.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/account_form_sheet.dart';
+import '../widgets/confirm_dialog.dart';
 
 class AccountsManagerPage extends StatelessWidget {
   const AccountsManagerPage({super.key});
@@ -171,26 +172,10 @@ class AccountsManagerPage extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, BankAccount account, HomeViewModel vm) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Supprimer le compte ?"),
-        content: Text("Le compte « ${account.name} » sera supprimé définitivement."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Annuler"),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryRed, minimumSize: Size.zero),
-            onPressed: () {
-              vm.deleteAccount(account);
-              Navigator.pop(context);
-            },
-            child: const Text("Supprimer"),
-          ),
-        ],
-      ),
-    );
+    showConfirmDialog(
+      context,
+      title: "Supprimer le compte ?",
+      message: "« ${account.name} »\n\nToutes les transactions et mensualisations associées seront supprimées définitivement.",
+    ).then((confirmed) { if (confirmed) vm.deleteAccount(account); });
   }
 }

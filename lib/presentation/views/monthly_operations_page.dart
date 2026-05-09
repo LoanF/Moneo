@@ -5,6 +5,7 @@ import '../../core/helpers/icon_helper.dart';
 import '../../core/notifiers/auth_notifier.dart';
 import '../../core/themes/app_colors.dart';
 import '../view_models/home_view_model.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/monthly_operation_form_sheet.dart';
 
 class MonthlyOperationsPage extends StatelessWidget {
@@ -58,82 +59,94 @@ class MonthlyOperationsPage extends StatelessWidget {
         color: AppColors.secondaryBackground,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => _showForm(context, uid, operation: op),
-        onLongPress: () => _confirmDelete(context, op, vm),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Day badge
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: cat != null
-                    ? Icon(IconHelper.getIcon(cat.iconCode), color: accentColor, size: 22)
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "${op.dayOfMonth}",
-                            style: TextStyle(color: accentColor, fontWeight: FontWeight.w900, fontSize: 16),
-                          ),
-                          Text("du mois", style: TextStyle(color: accentColor.withValues(alpha: 0.7), fontSize: 7, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      op.name,
-                      style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w700, fontSize: 15),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
+              child: cat != null
+                  ? Icon(IconHelper.getIcon(cat.iconCode), color: accentColor, size: 22)
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.repeat_rounded, size: 12, color: AppColors.secondaryText),
-                        const SizedBox(width: 4),
                         Text(
-                          "Le ${op.dayOfMonth} · ${account.name}",
-                          style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                          "${op.dayOfMonth}",
+                          style: TextStyle(color: accentColor, fontWeight: FontWeight.w900, fontSize: 16),
                         ),
+                        Text("du mois", style: TextStyle(color: accentColor.withValues(alpha: 0.7), fontSize: 7, fontWeight: FontWeight.w600)),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "${isExpense ? '-' : '+'}${op.amount.abs().toStringAsFixed(2)} €",
-                    style: TextStyle(color: accentColor, fontWeight: FontWeight.w900, fontSize: 16),
+                    op.name,
+                    style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w700, fontSize: 15),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isExpense ? "Débit" : "Crédit",
-                      style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.repeat_rounded, size: 12, color: AppColors.secondaryText),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Le ${op.dayOfMonth} · ${account.name}",
+                        style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "${isExpense ? '-' : '+'}${op.amount.abs().toStringAsFixed(2)} €",
+                  style: TextStyle(color: accentColor, fontWeight: FontWeight.w900, fontSize: 16),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _actionIcon(
+                      icon: Icons.edit_outlined,
+                      color: AppColors.grey1,
+                      onTap: () => _showForm(context, uid, operation: op),
+                    ),
+                    const SizedBox(width: 4),
+                    _actionIcon(
+                      icon: Icons.delete_outline_rounded,
+                      color: AppColors.primaryRed,
+                      onTap: () => _confirmDelete(context, op, vm),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _actionIcon({required IconData icon, required Color color, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 16),
       ),
     );
   }
@@ -185,26 +198,10 @@ class MonthlyOperationsPage extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, MonthlyPayment op, HomeViewModel vm) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Supprimer ?"),
-        content: Text("Voulez-vous supprimer « ${op.name} » ?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Annuler"),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primaryRed, minimumSize: Size.zero),
-            onPressed: () {
-              vm.deleteMonthlyPayment(op.id);
-              Navigator.pop(context);
-            },
-            child: const Text("Supprimer"),
-          ),
-        ],
-      ),
-    );
+    showConfirmDialog(
+      context,
+      title: "Supprimer la mensualisation ?",
+      message: "« ${op.name} » sera supprimée définitivement.",
+    ).then((confirmed) { if (confirmed) vm.deleteMonthlyPayment(op.id); });
   }
 }

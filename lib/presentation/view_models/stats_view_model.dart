@@ -95,6 +95,12 @@ class StatsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void jumpToMonth(DateTime month) {
+    _selectedMonth = DateTime(month.year, month.month);
+    _refreshMonthTransactions();
+    notifyListeners();
+  }
+
   double get totalIncome => _monthTransactions
       .where((t) => t.type == 'income')
       .fold(0.0, (s, t) => s + t.amount);
