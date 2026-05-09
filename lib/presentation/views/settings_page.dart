@@ -353,6 +353,7 @@ class SettingsPage extends StatelessWidget {
       confirmColor: AppColors.error,
     ).then((confirmed) async {
       if (!confirmed) return;
+      if (!context.mounted) return;
       context.read<HomeViewModel>().clear();
       await viewModel.logout();
       if (context.mounted) context.go(AppRoutes.login);
@@ -368,6 +369,7 @@ class SettingsPage extends StatelessWidget {
       icon: Icons.delete_forever_rounded,
     ).then((confirmed) async {
       if (!confirmed) return;
+      if (!context.mounted) return;
       context.read<HomeViewModel>().clear();
       final success = await viewModel.deleteAccount();
       if (context.mounted) {
