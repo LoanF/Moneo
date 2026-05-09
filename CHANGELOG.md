@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/LoanF/Moneo/compare/v1.5.0...v1.6.0) (2026-05-09)
+
+
+### Features
+
+* enhance transaction management, profile editing, and UI consistency ([c9803c3](https://github.com/LoanF/Moneo/commit/c9803c3c7cedf9d06660e8d1e5471b88cd644a4e))
+
+
+### Bug Fixes
+
+* add context mounted checks before accessing HomeViewModel in settings_page.dart ([09eb335](https://github.com/LoanF/Moneo/commit/09eb335fbabaadf9bc34f49fccd181f11094c527))
+
 ## [1.5.0](https://github.com/LoanF/Moneo/compare/v1.4.0...v1.5.0) (2026-05-06)
 
 
