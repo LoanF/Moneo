@@ -40,6 +40,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
+                  tooltip: 'Année précédente',
                   icon: const Icon(Icons.chevron_left_rounded, color: AppColors.mainText),
                   onPressed: () => setState(() => _year--),
                 ),
@@ -48,6 +49,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
                   style: const TextStyle(color: AppColors.mainText, fontWeight: FontWeight.w800, fontSize: 18),
                 ),
                 IconButton(
+                  tooltip: 'Année suivante',
                   icon: Icon(
                     Icons.chevron_right_rounded,
                     color: _year < now.year ? AppColors.mainText : AppColors.grey1,
@@ -138,7 +140,7 @@ class _StatsPageState extends State<StatsPage> {
         centerTitle: false,
       ),
       body: vm.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: Semantics(label: 'Chargement des statistiques', child: const CircularProgressIndicator()))
           : vm.errorMessage != null
               ? _buildError(vm)
               : _buildContent(vm),
@@ -205,10 +207,14 @@ class _StatsPageState extends State<StatsPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
+            tooltip: 'Mois précédent',
             icon: const Icon(Icons.chevron_left_rounded, color: AppColors.mainText, size: 28),
             onPressed: vm.previousMonth,
           ),
-          GestureDetector(
+          Semantics(
+            label: 'Sélectionner un mois : $label',
+            button: true,
+            child: GestureDetector(
             onTap: () => _showMonthPicker(context, vm),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -226,7 +232,9 @@ class _StatsPageState extends State<StatsPage> {
               ],
             ),
           ),
+          ),
           IconButton(
+            tooltip: 'Mois suivant',
             icon: Icon(
               Icons.chevron_right_rounded,
               color: vm.canGoNext ? AppColors.mainText : AppColors.grey1,
@@ -288,7 +296,9 @@ class _StatsPageState extends State<StatsPage> {
     required Color color,
     required IconData icon,
   }) {
-    return Container(
+    return Semantics(
+      label: '$label : $value',
+      child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.secondaryBackground,
@@ -314,6 +324,7 @@ class _StatsPageState extends State<StatsPage> {
           Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 11)),
         ],
       ),
+    ),
     );
   }
 
@@ -326,6 +337,11 @@ class _StatsPageState extends State<StatsPage> {
       (m, s) => [m, s.income, s.expense].reduce((a, b) => a > b ? a : b),
     );
 
+    final semanticDesc = stats.map((s) {
+      final label = DateFormat('MMMM yyyy').format(s.month);
+      return '$label : revenus ${s.income.toStringAsFixed(0)} €, dépenses ${s.expense.toStringAsFixed(0)} €';
+    }).join('. ');
+
     return _buildCard(
       title: 'Évolution sur 6 mois',
       trailing: Row(
@@ -335,15 +351,18 @@ class _StatsPageState extends State<StatsPage> {
           _legend(AppColors.primaryRed, 'Dépenses'),
         ],
       ),
-      child: SizedBox(
-        height: 140,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: stats.map((s) {
-            final isCurrent = s.month.year == vm.selectedMonth.year &&
-                s.month.month == vm.selectedMonth.month;
-            return Expanded(child: _buildMonthBars(s, maxVal, isCurrent));
-          }).toList(),
+      child: Semantics(
+        label: 'Graphique évolution sur 6 mois. $semanticDesc',
+        child: SizedBox(
+          height: 140,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: stats.map((s) {
+              final isCurrent = s.month.year == vm.selectedMonth.year &&
+                  s.month.month == vm.selectedMonth.month;
+              return Expanded(child: _buildMonthBars(s, maxVal, isCurrent));
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -444,13 +463,17 @@ class _StatsPageState extends State<StatsPage> {
             ],
           ),
           const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: hasIncome ? rate / 100 : 0,
-              minHeight: 10,
-              backgroundColor: AppColors.thirdBackground,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+          Semantics(
+            label: 'Taux d\'épargne',
+            value: hasIncome ? '${rate.toStringAsFixed(1)} %' : 'Aucun revenu',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: hasIncome ? rate / 100 : 0,
+                minHeight: 10,
+                backgroundColor: AppColors.thirdBackground,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
             ),
           ),
           if (hasIncome) ...[
@@ -501,7 +524,7 @@ class _StatsPageState extends State<StatsPage> {
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(IconHelper.getIcon(cat.iconCode), color: color, size: 16),
+                    child: Icon(IconHelper.getIcon(cat.iconCode), color: color, size: 16, semanticLabel: cat.name),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

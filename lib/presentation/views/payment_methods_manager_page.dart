@@ -209,7 +209,11 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
                 children: _types.map((entry) {
                   final (value, label) = entry;
                   final isSelected = _selectedType == value;
-                  return GestureDetector(
+                  return Semantics(
+                    label: label,
+                    selected: isSelected,
+                    button: true,
+                    child: GestureDetector(
                     onTap: () => setState(() => _selectedType = value),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -227,6 +231,7 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
+                    ),
                     ),
                   );
                 }).toList(),

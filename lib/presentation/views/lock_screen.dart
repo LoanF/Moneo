@@ -42,6 +42,7 @@ class _LockScreenState extends State<LockScreen> {
                   Icons.lock_rounded,
                   size: 40,
                   color: AppColors.mainColor,
+                  semanticLabel: 'Application verrouillée',
                 ),
               ),
               const SizedBox(height: 24),

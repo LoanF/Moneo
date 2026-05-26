@@ -97,12 +97,14 @@ class AccountsManagerPage extends StatelessWidget {
                       _actionIcon(
                         icon: Icons.edit_outlined,
                         color: AppColors.grey1,
+                        tooltip: 'Modifier ${account.name}',
                         onTap: () => _showForm(context, account: account),
                       ),
                       const SizedBox(width: 4),
                       _actionIcon(
                         icon: Icons.delete_outline_rounded,
                         color: AppColors.primaryRed,
+                        tooltip: 'Supprimer ${account.name}',
                         onTap: () => _confirmDelete(context, account, vm),
                       ),
                     ],
@@ -116,16 +118,20 @@ class AccountsManagerPage extends StatelessWidget {
     );
   }
 
-  Widget _actionIcon({required IconData icon, required Color color, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+  Widget _actionIcon({required IconData icon, required Color color, required VoidCallback onTap, required String tooltip}) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 16, semanticLabel: tooltip),
         ),
-        child: Icon(icon, color: color, size: 16),
       ),
     );
   }

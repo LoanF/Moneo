@@ -9,8 +9,11 @@ class AppColors {
   static const Color darkGrey = Color(0xFF242424);
 
   static const Color lightGrey = Color(0xFFE0E0E0);
-  static const Color grey1 = Color(0xFF8A8A8A);
+  static const Color grey1 = Color(0xFF929292);
   static const Color grey2 = Color(0xFFBDBDBD);
+  static const Color transferColor = Color(0xFF64B5F6);
+  static const Color chequeColor = Color(0xFFA1887F);
+  static const Color cardColor = Color(0xFFBA68C8);
 
   static const Color primaryRed = Color(0xFFF44336);
   static const Color lightRed = Color(0xFFE57373);

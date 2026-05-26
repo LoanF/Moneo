@@ -58,13 +58,23 @@ class AppUserService implements IAppUserService {
 
   @override
   Future<String> uploadAvatar(File imageFile) async {
-    final ext = imageFile.path.split('.').last.toLowerCase();
-    final mime = ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
+    final header = await imageFile.openRead(0, 12).fold<List<int>>([], (acc, c) => acc..addAll(c));
+    final mime = _detectMimeFromBytes(header);
+    if (mime == null) throw Exception('Format non supporté. Utilisez JPEG, PNG ou WebP.');
     final formData = FormData.fromMap({
       'avatar': await MultipartFile.fromFile(imageFile.path, contentType: DioMediaType.parse(mime)),
     });
     final response = await _apiClient.dio.post('/auth/upload-avatar', data: formData);
     return response.data['url'] as String;
+  }
+
+  String? _detectMimeFromBytes(List<int> b) {
+    if (b.length < 4) { return null; }
+    if (b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF) { return 'image/jpeg'; }
+    if (b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) { return 'image/png'; }
+    if (b.length >= 12 && b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46 &&
+        b[8] == 0x57 && b[9] == 0x45 && b[10] == 0x42 && b[11] == 0x50) { return 'image/webp'; }
+    return null;
   }
 
   @override

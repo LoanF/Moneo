@@ -49,7 +49,19 @@ class AuthViewModel extends CommonViewModel {
     }
   }
 
+  String? validatePasswordComplexity(String password) {
+    if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
+    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'Le mot de passe doit contenir au moins une majuscule.';
+    if (!RegExp(r'[0-9]').hasMatch(password)) return 'Le mot de passe doit contenir au moins un chiffre.';
+    return null;
+  }
+
   Future<bool> register(String email, String password) async {
+    final complexityError = validatePasswordComplexity(password);
+    if (complexityError != null) {
+      errorMessage = complexityError;
+      return false;
+    }
     isLoading = true;
     errorMessage = null;
     try {

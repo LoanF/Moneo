@@ -38,7 +38,7 @@ class AppTheme {
       filledButtonTheme: const FilledButtonThemeData(
         style: ButtonStyle(
           minimumSize: WidgetStatePropertyAll(Size(double.infinity, 56)),
-          backgroundColor: WidgetStatePropertyAll<Color>(AppColors.primaryRed),
+          backgroundColor: WidgetStatePropertyAll<Color>(AppColors.darkRed),
           foregroundColor: WidgetStatePropertyAll<Color>(Colors.white),
           shape: WidgetStatePropertyAll<RoundedRectangleBorder>(
             RoundedRectangleBorder(borderRadius: BorderRadius.all(defaultRadius)),

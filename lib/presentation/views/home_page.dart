@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
@@ -320,6 +321,7 @@ class _HomePageState extends State<HomePage> {
                               key: _searchKey,
                               children: [
                                 IconButton(
+                                  tooltip: 'Rechercher une opération',
                                   onPressed: () => setState(() => _isSearching = true),
                                   icon: const Icon(Icons.search_rounded, color: AppColors.mainText, size: 20),
                                 ),
@@ -340,6 +342,9 @@ class _HomePageState extends State<HomePage> {
                             ),
                             IconButton(
                               key: _visibilityKey,
+                              tooltip: homeViewModel.hideChecked
+                                  ? 'Afficher les transactions pointées'
+                                  : 'Masquer les transactions pointées',
                               onPressed: () => homeViewModel.toggleHideChecked(),
                               icon: Icon(
                                 homeViewModel.hideChecked ? Icons.visibility_off_rounded : Icons.visibility_rounded,
@@ -379,12 +384,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   static const _filterDefs = [
-    ('expense',  'Dépenses',   Icons.arrow_upward_rounded,       AppColors.primaryRed),
-    ('income',   'Revenus',    Icons.arrow_downward_rounded,     AppColors.primaryGreen),
-    ('transfer', 'Transferts', Icons.swap_horiz_rounded,         Colors.blueAccent),
-    ('cheque',   'Chèque',     Icons.edit_document,              Colors.brown),
-    ('card',     'CB / Carte', Icons.credit_card_rounded,        Colors.purple),
-    ('monthly',  'Mensuel',    Icons.calendar_month_rounded,     AppColors.mainColor),
+    ('expense',  'Dépenses',   Icons.arrow_upward_rounded,         AppColors.primaryRed),
+    ('income',   'Revenus',    Icons.arrow_downward_rounded,       AppColors.primaryGreen),
+    ('transfer', 'Transferts', Icons.swap_horiz_rounded,           AppColors.transferColor),
+    ('cheque',   'Chèque',     Icons.edit_document,                AppColors.chequeColor),
+    ('card',     'CB / Carte', Icons.credit_card_rounded,          AppColors.cardColor),
+    ('monthly',  'Mensuel',    Icons.calendar_month_rounded,       AppColors.mainColor),
     ('checked',  'Pointé',     Icons.check_circle_outline_rounded, AppColors.primaryGreen),
   ];
 
@@ -397,11 +402,15 @@ class _HomePageState extends State<HomePage> {
         children: _filterDefs.map((def) {
           final (id, label, icon, color) = def;
           final active = _activeFilters.contains(id);
-          return GestureDetector(
-            onTap: () => setState(() {
-              if (active) { _activeFilters.remove(id); } else { _activeFilters.add(id); }
-            }),
-            child: AnimatedContainer(
+          return Semantics(
+            label: label,
+            toggled: active,
+            button: true,
+            child: GestureDetector(
+              onTap: () => setState(() {
+                if (active) { _activeFilters.remove(id); } else { _activeFilters.add(id); }
+              }),
+              child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -426,6 +435,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+          ),
           );
         }).toList(),
       ),
@@ -483,11 +493,13 @@ class _HomePageState extends State<HomePage> {
               children: [
                 IconButton(
                   key: _statsKey,
+                  tooltip: 'Statistiques',
                   icon: const Icon(Icons.bar_chart_rounded, color: AppColors.mainText),
                   onPressed: () => context.push(AppRoutes.stats),
                 ),
                 IconButton(
                   key: _settingsKey,
+                  tooltip: 'Paramètres',
                   icon: const Icon(Icons.settings_outlined, color: AppColors.mainText),
                   onPressed: () => context.push(AppRoutes.settings),
                 ),
@@ -521,7 +533,7 @@ class _HomePageState extends State<HomePage> {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           buildDefaultDragHandles: false,
-          onReorder: vm.reorderAccounts,
+          onReorderItem: vm.reorderAccounts,
           children: vm.accounts.asMap().entries.map((entry) {
             final account = entry.value;
             final isSelected = vm.selectedAccount?.id == account.id;
@@ -541,7 +553,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildAccountCard(BankAccount account, bool isSelected) {
     final showPointed = (account.balance - account.pointedBalance).abs() > 0.005;
-    return AnimatedContainer(
+    return Semantics(
+      label: '${account.name}, solde ${account.balance.toStringAsFixed(2)} euros',
+      selected: isSelected,
+      button: true,
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: 170,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -576,6 +592,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ],
       ),
+    ),
     );
   }
 
@@ -583,7 +600,14 @@ class _HomePageState extends State<HomePage> {
     final transactions = _applyFilters(vm.filteredTransactions, vm);
 
     if (vm.isLoading && transactions.isEmpty) {
-      return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+      return SliverFillRemaining(
+        child: Center(
+          child: Semantics(
+            label: 'Chargement des transactions',
+            child: const CircularProgressIndicator(),
+          ),
+        ),
+      );
     }
 
     if (vm.errorMessage != null && transactions.isEmpty) {
@@ -653,7 +677,15 @@ class _HomePageState extends State<HomePage> {
                 return await _showDeleteConfirmation(context);
               },
               onDismissed: (_) => vm.deleteTransaction(trans),
-              child: InkWell(
+              child: Semantics(
+                label: '${trans.note ?? "Transaction"}, ${trans.amount >= 0 ? '+' : ''}${trans.amount.toStringAsFixed(2)} euros',
+                customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+                  CustomSemanticsAction(label: trans.isChecked ? 'Dépointage' : 'Pointer'): () => vm.toggleCheckTransaction(trans),
+                  const CustomSemanticsAction(label: 'Supprimer'): () => _showDeleteConfirmation(context).then((ok) {
+                    if (ok == true) vm.deleteTransaction(trans);
+                  }),
+                },
+                child: InkWell(
                 onTap: () => _showAddTransactionModal(context, transaction: trans),
                 borderRadius: BorderRadius.circular(20),
                 child: TransactionTile(
@@ -661,6 +693,7 @@ class _HomePageState extends State<HomePage> {
                   categoryIcon: categoryData.iconCode,
                   categoryColor: categoryData.colorValue,
                 ),
+              ),
               ),
             ),
           );

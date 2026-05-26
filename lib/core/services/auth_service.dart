@@ -228,10 +228,10 @@ class AuthService implements IAuthService {
   Future<void> signOut() async {
     _appUserService.clearUser();
     _authStreamController.add(null);
+    try { await _storage.delete(key: 'accessToken'); } catch (_) {}
+    try { await _storage.delete(key: 'refreshToken'); } catch (_) {}
+    try { await _googleSignIn.signOut(); } catch (_) {}
     getIt<ApiClient>().dio.post('/auth/logout').ignore();
-    _storage.delete(key: 'accessToken').catchError((_) {});
-    _storage.delete(key: 'refreshToken').catchError((_) {});
-    _googleSignIn.signOut().catchError((_) {});
   }
 
   @override

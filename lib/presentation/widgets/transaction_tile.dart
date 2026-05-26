@@ -18,7 +18,13 @@ class TransactionTile extends StatelessWidget {
         ? Color(categoryColor!)
         : (transaction.amount < 0 ? AppColors.mainColor : AppColors.primaryGreen);
 
-    return Container(
+    final amountLabel = '${transaction.amount >= 0 ? '+' : ''}${transaction.amount.toStringAsFixed(2)} euros';
+    final statusLabel = transaction.isChecked ? ', pointé' : '';
+    final monthlyLabel = transaction.isMonthly ? ', mensuel' : '';
+
+    return Semantics(
+      label: '${transaction.note ?? "Transaction"}, $amountLabel$statusLabel$monthlyLabel',
+      child: Container(
       decoration: BoxDecoration(
         color: transaction.isChecked ? AppColors.thirdBackground.withValues(alpha: 0.3) : AppColors.secondaryBackground,
         borderRadius: BorderRadius.circular(20),
@@ -122,6 +128,7 @@ class TransactionTile extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
