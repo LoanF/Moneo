@@ -533,7 +533,7 @@ class _HomePageState extends State<HomePage> {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           buildDefaultDragHandles: false,
-          onReorder: vm.reorderAccounts,
+          onReorderItem: vm.reorderAccounts,
           children: vm.accounts.asMap().entries.map((entry) {
             final account = entry.value;
             final isSelected = vm.selectedAccount?.id == account.id;
