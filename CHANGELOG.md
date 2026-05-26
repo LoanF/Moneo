@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.6.1](https://github.com/LoanF/Moneo/compare/v1.6.0...v1.6.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* deprecated parameter ([4136f1b](https://github.com/LoanF/Moneo/commit/4136f1b39ee0e87a56f6a44bb0bf3aa8612a3098))
+* owasp & accessibility ([fe10300](https://github.com/LoanF/Moneo/commit/fe10300d2fdf81ac31f3deeb8fbcb0deb16ff4c8))
+
 ## [1.6.0](https://github.com/LoanF/Moneo/compare/v1.5.0...v1.6.0) (2026-05-09)
 
 
