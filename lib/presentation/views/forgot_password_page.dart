@@ -56,6 +56,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _showError('Les mots de passe ne correspondent pas');
       return;
     }
+    final complexityError = vm.validatePasswordComplexity(_passwordController.text);
+    if (complexityError != null) {
+      _showError(complexityError);
+      return;
+    }
     final success = await vm.resetPassword(
       _email,
       _codeController.text.trim(),
@@ -176,6 +181,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           icon: Icons.lock_outline_rounded,
           obscure: _obscurePassword,
           suffix: IconButton(
+            tooltip: _obscurePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
             icon: Icon(
               _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
               color: AppColors.grey1,
@@ -191,6 +197,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           icon: Icons.lock_reset_outlined,
           obscure: _obscureConfirm,
           suffix: IconButton(
+            tooltip: _obscureConfirm ? 'Afficher la confirmation' : 'Masquer la confirmation',
             icon: Icon(
               _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
               color: AppColors.grey1,

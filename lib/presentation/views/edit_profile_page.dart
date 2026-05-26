@@ -341,11 +341,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget _buildAvatar() {
     final photoUrl = _user.photoUrl;
     if (photoUrl != null && photoUrl.isNotEmpty) {
-      return Image.network(photoUrl, fit: BoxFit.cover, width: 100, height: 100);
+      return Semantics(
+        label: 'Photo de profil de ${_user.username}',
+        image: true,
+        child: Image.network(photoUrl, fit: BoxFit.cover, width: 100, height: 100),
+      );
     }
     return Container(
       color: AppColors.thirdBackground,
-      child: const Icon(Icons.person_rounded, size: 48, color: AppColors.grey1),
+      child: const Icon(Icons.person_rounded, size: 48, color: AppColors.grey1, semanticLabel: 'Aucune photo de profil'),
     );
   }
 

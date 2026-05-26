@@ -58,6 +58,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     icon: Icons.lock_outline_rounded,
                     obscure: _obscurePassword,
                     suffix: IconButton(
+                      tooltip: _obscurePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                         color: AppColors.grey1,
@@ -73,6 +74,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     icon: Icons.lock_reset_outlined,
                     obscure: _obscureConfirm,
                     suffix: IconButton(
+                      tooltip: _obscureConfirm ? 'Afficher la confirmation' : 'Masquer la confirmation',
                       icon: Icon(
                         _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                         color: AppColors.grey1,
@@ -128,7 +130,7 @@ class _RegisterPageState extends State<RegisterPage> {
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
           child: Column(
             children: [
-              SvgPicture.asset(AppAssets.logo, height: 72),
+              SvgPicture.asset(AppAssets.logo, height: 72, semanticsLabel: 'Logo Moneo'),
               const SizedBox(height: 20),
               Text(
                 "Créer un compte",
@@ -189,6 +191,7 @@ class _RegisterPageState extends State<RegisterPage> {
           SvgPicture.asset(
             'assets/images/google_logo.svg',
             height: 18,
+            excludeFromSemantics: true,
           ),
           const SizedBox(width: 10),
           const Text("Continuer avec Google"),

@@ -112,6 +112,7 @@ class _MoneoState extends State<Moneo> with WidgetsBindingObserver {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      locale: const Locale('fr', 'FR'),
       supportedLocales: const [
         Locale('fr'),
         Locale('en'),

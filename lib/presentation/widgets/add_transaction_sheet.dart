@@ -227,7 +227,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   }),
                 ],
                 style: TextStyle(
-                  color: _isTransfer ? Colors.blueAccent : (_isExpense ? AppColors.mainColor : AppColors.primaryGreen),
+                  color: _isTransfer ? AppColors.transferColor : (_isExpense ? AppColors.mainColor : AppColors.primaryGreen),
                   fontSize: 48,
                   fontWeight: FontWeight.w900,
                 ),
@@ -312,7 +312,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 height: 60,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: _isTransfer ? Colors.blueAccent : (_isExpense ? AppColors.mainColor : AppColors.primaryGreen),
+                    backgroundColor: _isTransfer ? AppColors.transferColor : (_isExpense ? AppColors.mainColor : AppColors.primaryGreen),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
                   onPressed: _isSubmitting ? null : _submit,
@@ -333,21 +333,26 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   Widget _buildTypeButton(String label, bool isSelected, VoidCallback onTap) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.secondaryBackground : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? AppColors.mainText : AppColors.grey1,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: Semantics(
+        label: label,
+        selected: isSelected,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.secondaryBackground : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isSelected ? AppColors.mainText : AppColors.grey1,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
         ),
@@ -458,7 +463,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           final isSelected = isParentList ? _selectedParent?.id == cat.id : _selectedSub?.id == cat.id;
           final color = Color(cat.colorValue);
 
-          return GestureDetector(
+          return Semantics(
+            label: cat.name,
+            selected: isSelected,
+            button: true,
+            child: GestureDetector(
             onTap: () {
               setState(() {
                 if (isParentList) {
@@ -510,6 +519,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ],
               ),
             ),
+            ),
           );
         },
       ),
@@ -535,7 +545,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             itemBuilder: (context, i) {
               final method = methods[i];
               final isSelected = _selectedPaymentMethod?.id == method.id;
-              return GestureDetector(
+              return Semantics(
+                label: method.name,
+                selected: isSelected,
+                button: true,
+                child: GestureDetector(
                 onTap: () {
                   setState(() {
                     if (isSelected) {
@@ -567,6 +581,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       fontSize: 13,
                     ),
                   ),
+                ),
                 ),
               );
             },
