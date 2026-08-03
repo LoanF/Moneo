@@ -1,0 +1,35 @@
+name: Audit de sécurité des dépendances
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Analyse des dépendances Dart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Signale les dépendances en retard de version.
+      # Non bloquant : sert de rapport pour la revue hebdomadaire.
+      - name: Dépendances obsolètes
+        run: flutter pub outdated --show-all || true
+
+      # Bloque en cas de dépendance retirée ou d'incompatibilité de contrainte.
+      - name: Résolution stricte des dépendances
+        run: dart pub deps --style=compact
+
+      - name: Analyse statique
+        run: flutter analyze
