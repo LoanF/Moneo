@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:moneo/presentation/views/accounts_manager_page.dart';
 import 'package:moneo/presentation/views/edit_profile_page.dart';
 import 'package:moneo/presentation/views/home_page.dart';
@@ -32,6 +33,7 @@ final List<String> unverifiedRoutes = [
 final GoRouter appRouter = GoRouter(
   refreshListenable: getIt<AuthNotifier>(),
   initialLocation: AppRoutes.login,
+  observers: [SentryNavigatorObserver()],
   redirect: (context, state) async {
     final authNotifier = getIt<AuthNotifier>();
     final loggedIn = authNotifier.isAuthenticated;
