@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.7.0](https://github.com/LoanF/Moneo/compare/v1.6.1...v1.7.0) (2026-08-04)
+
+
+### Features
+
+* integrate Sentry for error tracking and performance monitoring ([b8677c6](https://github.com/LoanF/Moneo/commit/b8677c6e151ea7e7644a76ae7fc6f26d47ce4158))
+
+
+### Bug Fixes
+
+* generate firebase_options.dart before analyze in security-audit workflow ([812d6cb](https://github.com/LoanF/Moneo/commit/812d6cbc43cf3f04240a3e2e243b1eb6cf7435f3))
+
 ### [1.6.1](https://github.com/LoanF/Moneo/compare/v1.6.0...v1.6.1) (2026-05-26)
 
 
