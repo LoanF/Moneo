@@ -52,6 +52,8 @@ dependencies:
   uuid: ^4.5.2
   local_auth: ^2.3.0
   tutorial_coach_mark: ^1.2.11
+  sentry_flutter: ^9.26.0
+  package_info_plus: ^8.3.0
 
 dev_dependencies:
   flutter_test:

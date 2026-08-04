@@ -1,0 +1,42 @@
+version: 2
+updates:
+  # ---------------------------------------------------------------
+  # Dépendances Dart / Flutter
+  # ---------------------------------------------------------------
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    labels:
+      - "type:dependances"
+    groups:
+      production-minor-patch:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      development-all:
+        dependency-type: "development"
+    ignore:
+      # Majeures traitées hors cycle, après étude d'impact
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ---------------------------------------------------------------
+  # Actions de la chaîne CI/CD
+  # ---------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "ci(deps)"
+    labels:
+      - "type:dependances"

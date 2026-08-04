@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +9,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl_standalone.dart';
 import 'package:moneo/presentation/view_models/home_view_model.dart';
 import 'package:moneo/presentation/view_models/stats_view_model.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'core/di.dart';
 import 'core/notifiers/auth_notifier.dart';
 import 'core/notifiers/lock_notifier.dart';
@@ -23,8 +26,32 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final packageInfo = await PackageInfo.fromPlatform();
+
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = const String.fromEnvironment('SENTRY_DSN');
+      options.environment = kReleaseMode ? 'production' : 'development';
+      options.release = 'moneo@${packageInfo.version}+${packageInfo.buildNumber}';
+      options.tracesSampleRate = 0.2;
+
+      // Application financière : ne jamais envoyer de données personnelles.
+      options.sendDefaultPii = false;
+      options.beforeSend = (event, hint) {
+        // Purge des jetons d'authentification avant envoi.
+        event.request?.headers.remove('Authorization');
+        event.request?.headers.remove('Cookie');
+        return event;
+      };
+    },
+    appRunner: _runApp,
+  );
+}
+
+Future<void> _runApp() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -52,7 +79,7 @@ void main() async {
   final String systemLocale = await findSystemLocale();
   await initializeDateFormatting(systemLocale, null);
   Intl.defaultLocale = systemLocale;
-  
+
   runApp(
     MultiProvider(
       providers: [
