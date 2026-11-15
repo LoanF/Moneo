@@ -1,166 +1,50 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl_standalone.dart';
-import 'package:moneo/presentation/view_models/home_view_model.dart';
-import 'package:moneo/presentation/view_models/stats_view_model.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'core/di.dart';
-import 'core/notifiers/auth_notifier.dart';
-import 'core/notifiers/lock_notifier.dart';
-import 'core/routes/app_router.dart';
-import 'core/themes/app_theme.dart';
-import 'firebase_options.dart';
-import 'presentation/view_models/auth_view_model.dart';
-import 'presentation/views/lock_screen.dart';
 
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-}
+import 'app.dart';
+import 'core/config.dart';
+import 'core/local_store.dart';
+import 'data/models.dart';
+import 'state/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  final packageInfo = await PackageInfo.fromPlatform();
+  Intl.defaultLocale = 'fr_FR';
+  await initializeDateFormatting('fr_FR');
 
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = const String.fromEnvironment('SENTRY_DSN');
-      options.environment = kReleaseMode ? 'production' : 'development';
-      options.release = 'moneo@${packageInfo.version}+${packageInfo.buildNumber}';
-      options.tracesSampleRate = 0.2;
+  // Les préférences de l'appareil sont lues avant le premier affichage : pas de flash de thème,
+  // et le verrou est en place dès la première image.
+  final store = FileLocalStore();
+  final saved = await store.read('device_prefs');
+  final prefs = saved is Json
+      ? DevicePrefs.fromJson(saved)
+      : const DevicePrefs();
 
-      // Application financière : ne jamais envoyer de données personnelles.
-      options.sendDefaultPii = false;
-      options.beforeSend = (event, hint) {
-        // Purge des jetons d'authentification avant envoi.
-        event.request?.headers.remove('Authorization');
-        event.request?.headers.remove('Cookie');
-        return event;
-      };
-    },
-    appRunner: _runApp,
-  );
-}
-
-Future<void> _runApp() async {
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
+  final app = ProviderScope(
+    // Pas de nouvelle tentative automatique : les écrans proposent un bouton « Réessayer ».
+    retry: (_, _) => null,
+    overrides: [
+      localStoreProvider.overrideWithValue(store),
+      initialDevicePrefsProvider.overrideWithValue(prefs),
+    ],
+    child: const MoneoApp(),
   );
 
-  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-
-  configureDependencies();
-  await getIt<LockNotifier>().initialize();
-
-  final String systemLocale = await findSystemLocale();
-  await initializeDateFormatting(systemLocale, null);
-  Intl.defaultLocale = systemLocale;
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => getIt<AuthViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<HomeViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<StatsViewModel>()),
-        ChangeNotifierProvider(create: (_) => getIt<AuthNotifier>()),
-        ChangeNotifierProvider(create: (_) => getIt<LockNotifier>()),
-      ],
-      child: const Moneo(),
-    ),
-  );
-}
-
-class Moneo extends StatefulWidget {
-  const Moneo({super.key});
-
-  @override
-  State<Moneo> createState() => _MoneoState();
-}
-
-class _MoneoState extends State<Moneo> with WidgetsBindingObserver {
-  DateTime? _lastBackgroundTime;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _lastBackgroundTime = DateTime.now();
-    } else if (state == AppLifecycleState.resumed) {
-      getIt<LockNotifier>().checkAutoLock(_lastBackgroundTime);
-      _lastBackgroundTime = null;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Moneo',
-      themeMode: ThemeMode.dark,
-      darkTheme: AppTheme.darkTheme,
-      routerConfig: appRouter,
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      locale: const Locale('fr', 'FR'),
-      supportedLocales: const [
-        Locale('fr'),
-        Locale('en'),
-        Locale('es'),
-        Locale('de'),
-        Locale('it'),
-        Locale('pt'),
-        Locale('ar'),
-        Locale('zh'),
-        Locale('ja'),
-      ],
-      builder: (context, child) {
-        return Consumer2<LockNotifier, AuthNotifier>(
-          builder: (context, lockNotifier, authNotifier, _) {
-            if (lockNotifier.isLocked && authNotifier.isAuthenticated) {
-              return const LockScreen();
-            }
-            return child!;
-          },
-        );
-      },
-    );
-  }
+  if (AppConfig.sentryDsn.isEmpty) return runApp(app);
+  await SentryFlutter.init((options) {
+    options.dsn = AppConfig.sentryDsn;
+    options.tracesSampleRate = 0.1;
+    // Application financière : aucune donnée personnelle ne part dans les rapports d'erreur.
+    options.sendDefaultPii = false;
+    options.beforeSend = (event, hint) {
+      event.request?.headers.remove('Authorization');
+      return event;
+    };
+  }, appRunner: () => runApp(app));
 }
