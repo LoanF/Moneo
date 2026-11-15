@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/LoanF/Moneo/compare/v1.7.0...v2.0.0) (2026-11-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* l'app nécessite l'API Moneo v2.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+
+### Features
+
+* refonte v2 de l'app (API v2, Riverpod, interface sur mesure) ([0791e2f](https://github.com/LoanF/Moneo/commit/0791e2f08c630e6d1409687fa97b4a2374b35923))
+
 ## [1.7.0](https://github.com/LoanF/Moneo/compare/v1.6.1...v1.7.0) (2026-08-04)
 
 
