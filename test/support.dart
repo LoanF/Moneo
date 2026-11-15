@@ -229,15 +229,33 @@ Future<void> prepareTests() async {
   Intl.defaultLocale = 'fr_FR';
   await initializeDateFormatting('fr_FR');
 
-  final flutterRoot = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.path;
-  final fonts = Directory('$flutterRoot/bin/cache/artifacts/material_fonts');
-  if (!fonts.existsSync()) return;
-  Future<ByteData> bytes(String name) async => ByteData.view((await File('${fonts.path}/$name').readAsBytes()).buffer);
-  final roboto = FontLoader('Roboto');
-  for (final file in ['roboto-regular.ttf', 'roboto-medium.ttf', 'roboto-bold.ttf']) {
-    roboto.addFont(bytes(file));
+  // Les polices ne servent qu'à rendre les captures lisibles : leur absence (cache Flutter
+  // différent en CI) ne doit jamais faire échouer la suite.
+  try {
+    final flutterRoot = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.path;
+    final fonts = Directory('$flutterRoot/bin/cache/artifacts/material_fonts');
+    if (!fonts.existsSync()) return;
+    Future<ByteData>? bytes(String name) {
+      final file = File('${fonts.path}/$name');
+      if (!file.existsSync()) return null;
+      return file.readAsBytes().then((b) => ByteData.view(b.buffer));
+    }
+
+    final roboto = FontLoader('Roboto');
+    var robotoCount = 0;
+    for (final name in ['roboto-regular.ttf', 'roboto-medium.ttf', 'roboto-bold.ttf']) {
+      final data = bytes(name);
+      if (data == null) continue;
+      roboto.addFont(data);
+      robotoCount++;
+    }
+    if (robotoCount > 0) await roboto.load();
+    final iconData = bytes('materialicons-regular.otf');
+    if (iconData != null) {
+      final icons = FontLoader('MaterialIcons')..addFont(iconData);
+      await icons.load();
+    }
+  } catch (_) {
+    // Polices par défaut du test : sans conséquence sur les assertions.
   }
-  await roboto.load();
-  final icons = FontLoader('MaterialIcons')..addFont(bytes('materialicons-regular.otf'));
-  await icons.load();
 }
