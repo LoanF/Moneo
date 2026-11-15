@@ -17,60 +17,54 @@
 
 ## Features
 
-- **Dashboard** — Solde global sur tous les comptes, liste des transactions avec swipe-to-check et swipe-to-delete
-- **Statistics** — Décomposition revenus/dépenses mensuelle, graphique en barres sur 6 mois, répartition par catégorie, taux d'épargne
-- **Accounts manager** — Création et gestion de plusieurs comptes bancaires
-- **Categories manager** — Catégories personnalisées avec icônes et couleurs
-- **Payment methods** — Suivi des transactions par moyen de paiement (carte, espèces, virement…)
-- **Recurring payments** — Paiements mensuels récurrents générés automatiquement côté serveur
-- **Authentication** — Email/mot de passe + Google Sign-In, vérification email, réinitialisation du mot de passe
-- **Biometric lock** — Verrouillage automatique Face ID / empreinte avec délai configurable
-- **Push notifications** — Récapitulatif mensuel et rappels d'activité via Firebase Cloud Messaging
-- **Realtime sync** — Mises à jour en temps réel via Server-Sent Events ; les modifications d'un appareil apparaissent instantanément sur les autres
-- **Setup wizard** — Assistant de premier lancement pour créer des comptes et moyens de paiement
+- **Fast entry** — the amount is the hero of the sheet, labels already used suggest category, payment method and amount, today by default, quick day entry (`14` → the 14th of this month), duplicate an operation
+- **Three balances per account** — remaining, checked ("pointé") and as-of-today, always computed by the API; swipe between accounts on the home screen
+- **Reconciliation** — tap the badge or swipe to check an operation against the bank statement
+- **Transfers, chequebooks** — paired transfers between accounts, automatic cheque numbering
+- **Recurring payments** — per-month amounts, one-tap setup of the month, three generation modes
+- **Budgets, insights** — category budgets with alerts, monthly summary, 12-month trend, balance forecast, pivot table (period → category → subcategory)
+- **Search and filters** — text, account, type, category, payment method, period, amount; debit/credit totals of the result
+- **Works offline** — the last known state opens instantly; operations created without network are queued and sent when it returns
+- **Notifications** — in-app centre, push on every device, quiet hours
+- **Password managers** — sign-in, sign-up, reset and change-password forms expose the right autofill hints (Proton Pass, 1Password, Bitwarden, iCloud Keychain, Google)
+- **Security** — biometric lock, per-device sessions with remote sign-out, account deletion
+- **Import / export** — imports the `Comptes.xlsm` tracking workbook, CSV and JSON export
+- **Custom UI** — dark-first, fully custom component kit, light theme available; French UI
 
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Flutter 3 / Dart 3 |
-| State management | [Provider](https://pub.dev/packages/provider) (ChangeNotifier) |
-| Dependency injection | [get_it](https://pub.dev/packages/get_it) |
-| Navigation | [go_router](https://pub.dev/packages/go_router) |
-| HTTP client | [Dio](https://pub.dev/packages/dio) with token refresh interceptor |
-| Secure storage | [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) |
-| Push notifications | [firebase_messaging](https://pub.dev/packages/firebase_messaging) |
-| Google auth | [google_sign_in](https://pub.dev/packages/google_sign_in) |
-| Biometrics | [local_auth](https://pub.dev/packages/local_auth) |
-| CI | GitHub Actions |
+| UI | Flutter 3.50+, `material_ui` as a base, custom component kit (`lib/ui/widgets/kit.dart`) |
+| State | [Riverpod 3](https://riverpod.dev) (`Notifier` / `AsyncNotifier`, no code generation) |
+| Navigation | `go_router` with a stateful shell (5 tabs) |
+| HTTP | `dio`, single-flight token refresh, SSE for realtime |
+| Storage | `flutter_secure_storage` (tokens), JSON files (cache, offline queue, device preferences) |
+| Charts | `fl_chart` |
+| Push / errors | Firebase Messaging (optional), Sentry (optional) |
 
 ## Architecture
 
 ```
 lib/
-├── core/
-│   ├── di.dart              # GetIt dependency injection setup
-│   ├── interceptor/         # Dio API client with auth + token refresh
-│   ├── notifiers/           # Auth state, biometric lock (ChangeNotifier)
-│   ├── repositories/        # Data access layer (one per entity)
-│   ├── routes/              # GoRouter config + route constants
-│   ├── services/            # Auth, biometrics, realtime SSE
-│   ├── themes/              # Dark theme, color palette
-│   └── utils/               # Error handler
-├── data/
-│   ├── models/              # Dart data classes (Transaction, BankAccount…)
-│   └── constants/           # API base URL, asset paths, config keys
-└── presentation/
-    ├── views/               # 15 screens (pages)
-    ├── view_models/         # Business logic, state for each screen
-    └── widgets/             # Reusable UI components (sheets, tiles…)
+├── main.dart            # Bootstrap: locale, device preferences, Sentry
+├── app.dart             # Router with session-driven redirects, themes, lock overlay
+├── core/                # Config, formatting, API client, local JSON store
+├── data/                # Immutable models and the typed API (`MoneoApi`)
+├── state/               # Riverpod providers: session, shared data, lists, offline queue, services
+└── ui/
+    ├── theme/           # Design tokens (colours, spacing, motion) and theme
+    ├── widgets/         # kit.dart (custom components) and shared states
+    ├── auth/  home/  editor/  insights/  plan/  settings/
+    └── shell.dart       # Floating dock, lock screen, first-run setup, notification centre
 ```
 
-**Data flow:** `View → ViewModel → Repository → ApiClient (Dio) → API`
+- **Single source of truth**: balances and statistics come from the API; the app never recomputes them.
+- **`appDataProvider`** holds accounts, categories, payment methods, recurring payments and budgets, loaded in one `/bootstrap` call, cached on disk and refreshed on every server event.
+- **`dataVersionProvider`** is bumped on any change; lists and statistics watch it and reload.
+- **Offline queue** (`outboxProvider`): creations carry a client-generated id, so replaying them is idempotent.
 
-**Auth flow:** `App launch → check stored token → /auth/me → GoRouter redirect`
-
-**Realtime flow:** `RealtimeService (SSE) → RealtimeEvent → ViewModel.listen → notifyListeners()`
+The visual system is documented in [DESIGN.md](DESIGN.md), the product in [PRODUCT.md](PRODUCT.md).
 
 ## Prerequisites
 
@@ -90,27 +84,25 @@ flutter pub get
 
 ### 2. Configure the API URL
 
-Edit `lib/data/constants/assets.dart` and set `apiUrl` to your API base URL:
+The API URL and the Google client id are compile-time values:
 
-```dart
-static const String apiUrl = 'http://10.0.2.2:3000/api/v1'; // Android emulator
-// static const String apiUrl = 'http://localhost:3000/api/v1'; // iOS simulator
-// static const String apiUrl = 'https://api.your-domain.com/api/v1'; // Production
+```bash
+flutter run --dart-define=API_URL=http://10.0.2.2:3000/api/v1   # Android emulator → local API
+flutter build appbundle --release --dart-define=API_URL=https://moneo-app.com/api/v1
 ```
 
-### 3. Firebase
+Without `API_URL`, the app targets `https://moneo-app.com/api/v1`. The app requires the Moneo API v2.
 
-Place the Firebase config files in the correct locations:
+### 3. Firebase (optional)
 
-- Android: `android/app/google-services.json`
-- iOS: `ios/Runner/GoogleService-Info.plist`
+`lib/firebase_options.dart` is not versioned: generate it with `flutterfire configure`, and place
+`android/app/google-services.json` and `ios/Runner/GoogleService-Info.plist`. Without a valid
+configuration the app runs normally and push notifications are simply disabled.
 
 ### 4. Google Sign-In
 
-Set your Google OAuth server client ID in `lib/data/constants/assets.dart`:
-
-```dart
-static const String googleServerClientId = 'YOUR_SERVER_CLIENT_ID.apps.googleusercontent.com';
+```bash
+flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=YOUR_SERVER_CLIENT_ID.apps.googleusercontent.com
 ```
 
 ## Run
@@ -153,11 +145,14 @@ flutter test --watch
 
 | Fichier | Ce qui est testé |
 |---|---|
-| `test/widget_test.dart` | `Transaction.fromJson` (champs de base, détection `isMonthly`, types d'amount) |
-| | `BankAccount.fromJson` (tous les champs, `pointedBalance` par défaut) |
-| | `Category.fromJson` (`colorValue` en int ou String) |
-| | `MonthlyPayment.fromJson` (alias `lastProcessed`/`lastApplied`, valeur null) |
-| | `AppUser.fromJson` (uid depuis `id`, `notificationPrefs` par défaut) |
+| `test/core_test.dart` | Mise en forme des montants et des dates, saisie rapide du jour, modèles, filtres ; client API : renouvellement unique de la session, fermeture sur refus du serveur, session conservée lors d'une coupure réseau |
+| `test/app_test.dart` | L'app réelle pilotée contre un faux serveur : champs reconnus par les gestionnaires de mots de passe, connexion, vérification d'adresse, accueil et soldes, pointage, masquage des montants, ouverture hors-ligne sur le cache, file d'attente hors-ligne, parcours des cinq onglets |
+
+Captures d'écran des principaux écrans (rendu de test, thème sombre) :
+
+```bash
+flutter test --dart-define=SCREENSHOTS=true --update-goldens   # écrit test/screens/*.png
+```
 
 ## CI/CD
 
@@ -184,35 +179,6 @@ push → [check] flutter analyze + flutter test
 3. **Build iOS** — compile sans signature de distribution (artefact archivé 30 jours)
 
 > Pour publier sur le Play Store ou l'App Store, il faudra configurer les secrets de signing et ajouter une étape de déploiement.
-
-## Project structure details
-
-### ViewModels
-
-| ViewModel | Responsibility |
-|---|---|
-| `AuthViewModel` | Login, register, setup, profile update, account deletion |
-| `HomeViewModel` | Transactions, accounts, categories, payment methods, realtime |
-| `StatsViewModel` | Statistics calculations, month navigation, realtime refresh |
-
-### Key services
-
-| Service | Responsibility |
-|---|---|
-| `AuthService` | API auth calls, token storage, Google Sign-In |
-| `RealtimeService` | SSE connection, auto-reconnect, event stream |
-| `BiometricService` | local_auth wrapper for Face ID / fingerprint |
-
-### Route guards
-
-GoRouter redirects based on auth state:
-
-| State | Redirect |
-|---|---|
-| Not authenticated | `/login` |
-| Authenticated, email not verified | `/verify-email` |
-| Authenticated, setup not completed | `/setup` |
-| Authenticated, setup completed | `/home` |
 
 ## App info
 
