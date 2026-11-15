@@ -1090,7 +1090,7 @@ Future<ImportReport?> importWorkbook(
     type: FileType.custom,
     allowedExtensions: const ['xlsm', 'xlsx'],
   );
-  final path = picked?.files.single.path;
+  final path = picked.isEmpty ? null : picked.first.path;
   if (path == null || !context.mounted) return null;
   try {
     return await ref
