@@ -224,6 +224,9 @@ class SettingsPage extends ConsumerWidget {
                     danger: true,
                     title: 'Se déconnecter',
                     onTap: () async {
+                      // Lu avant tout await : la page peut être démontée entre-temps.
+                      final google = ref.read(googleAuthProvider);
+                      final session = ref.read(sessionProvider.notifier);
                       final waiting = ref.read(outboxProvider).length;
                       final sure = await confirm(
                         context,
@@ -235,8 +238,8 @@ class SettingsPage extends ConsumerWidget {
                         destructive: waiting > 0,
                       );
                       if (!sure) return;
-                      await ref.read(googleAuthProvider).signOut();
-                      await ref.read(sessionProvider.notifier).logout();
+                      await google.signOut();
+                      await session.logout();
                     },
                   ),
                 ],
