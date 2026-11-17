@@ -11,7 +11,7 @@ import 'settings/settings_pages.dart';
 import 'theme/theme.dart';
 import 'widgets/common.dart';
 
-/// Coque de l'app : le contenu passe sous une barre de navigation flottante en verre.
+/// Coque de l'app : le contenu se place au-dessus de la barre de navigation flottante en verre.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
@@ -46,8 +46,8 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    extendBody: true,
-    body: DockInset(height: 84, child: shell),
+    // Le contenu s'arrête au-dessus de la barre : rien ne passe dessous.
+    body: shell,
     bottomNavigationBar: FloatingDock(
       items: _items,
       index: shell.currentIndex,
